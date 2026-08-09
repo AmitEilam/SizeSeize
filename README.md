@@ -1,3 +1,5 @@
+https://size-seize.vercel.app
+
 # SizeSeize
 
 Personal stock-monitoring dashboard. Sign in with Google, track product URLs with a desired size, get email alerts when that size becomes available, and receive a daily stock summary.
