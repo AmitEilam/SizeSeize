@@ -179,11 +179,11 @@ Add for **Production** (and Preview if you want):
 
 ```json
 {
-  "crons": [{ "path": "/api/cron/monitor", "schedule": "0 18 * * *" }]
+  "crons": [{ "path": "/api/cron/monitor", "schedule": "0 9 * * *" }]
 }
 ```
 
-That is **18:00 UTC daily** (~21:00 Israel summer time / ~20:00 winter). Hobby allows at most one run per day.
+That is **09:00 UTC daily** = **12:00 PM Israel summer time (IDT)**. In winter (IST, UTC+2) the same cron runs at **11:00 AM** Israel time. Hobby allows at most one run per day.
 
 Vercel automatically sends:
 

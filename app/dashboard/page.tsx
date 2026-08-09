@@ -50,8 +50,8 @@ export default async function DashboardPage() {
             Monitored products
           </h1>
           <p className="mt-1 text-[var(--muted)]">
-            Add product URLs and the size you want. SizeSeize checks stock once
-            per day and emails you when your size becomes available.
+            Add product URLs and the size you want. SizeSeize checks stock daily at
+            12:00 PM and emails you when your size becomes available.
           </p>
         </div>
 
