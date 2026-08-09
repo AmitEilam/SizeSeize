@@ -7,7 +7,7 @@ import {
 import { shopifyAdapter } from "@/lib/adapters/shopify";
 
 /**
- * Castro Israel starter adapter: Shopify JSON when available.
+ * Castro Israel starter adapter - Shopify JSON when available.
  */
 export const castroAdapter: ProductAdapter = {
   id: "castro",

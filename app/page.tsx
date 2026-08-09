@@ -30,7 +30,7 @@ export default async function HomePage() {
           </h1>
           <p className="mt-4 max-w-lg text-[1.08rem] leading-relaxed text-[var(--hero-muted)]">
             Track product URLs, set the size you want, and get an email the day
-            it becomes available, plus a daily stock summary.
+            it becomes available - plus a daily stock summary.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link

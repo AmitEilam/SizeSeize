@@ -37,7 +37,7 @@ export async function sendDailySummary(to: string, products: SummaryProduct[]) {
   const { error } = await resend.emails.send({
     from: getFromAddress(),
     to,
-    subject: `SizeSeize daily summary: ${products.length} product${products.length === 1 ? "" : "s"}`,
+    subject: `SizeSeize daily summary - ${products.length} product${products.length === 1 ? "" : "s"}`,
     html: `
       <div style="font-family: Georgia, 'Times New Roman', serif; max-width: 600px; color: #1a1a1a;">
         <h1 style="font-size: 22px; margin-bottom: 4px;">Daily stock summary</h1>
