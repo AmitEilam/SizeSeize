@@ -1,3 +1,5 @@
+import { cleanSizeLabel } from "@/lib/sizes";
+
 /** Normalize sizes for comparison across EN/HE storefronts. */
 const HEBREW_SIZE_ALIASES: Record<string, string> = {
   "קס": "xs",
@@ -13,17 +15,14 @@ const HEBREW_SIZE_ALIASES: Record<string, string> = {
 };
 
 export function normalizeSize(size: string): string {
-  const trimmed = size.trim().toLowerCase().replace(/\s+/g, " ");
-  if (!trimmed) return "";
+  const cleaned = cleanSizeLabel(size).toLowerCase();
+  if (!cleaned) return "";
 
-  if (HEBREW_SIZE_ALIASES[trimmed]) {
-    return HEBREW_SIZE_ALIASES[trimmed];
+  if (HEBREW_SIZE_ALIASES[cleaned]) {
+    return HEBREW_SIZE_ALIASES[cleaned];
   }
 
-  return trimmed
-    .replace(/^size\s+/i, "")
-    .replace(/^מידה\s+/i, "")
-    .replace(/\s+/g, "");
+  return cleaned.replace(/\s+/g, "");
 }
 
 export function sizesMatch(desired: string, available: string): boolean {
@@ -107,8 +106,8 @@ export function canEvaluateMonitorTarget(
 export function formatDesiredSizeLabel(
   desiredSize: string | null | undefined,
 ): string {
-  const trimmed = desiredSize?.trim();
-  return trimmed ? trimmed : "Overall availability";
+  const cleaned = desiredSize ? cleanSizeLabel(desiredSize) : "";
+  return cleaned || "Overall availability";
 }
 
 /** EN/HE unavailability phrases - fallback only when structured signals are missing. */

@@ -130,8 +130,8 @@ export const nikeAdapter: ProductAdapter = {
           .filter((sku) => availabilityBySku.get(sku.id ?? "") === true)
           .map(
             (sku) =>
-              sku.nikeSize ||
               sku.countrySpecifications?.[0]?.localizedSize ||
+              sku.nikeSize ||
               "",
           )
           .filter(Boolean);
@@ -172,7 +172,7 @@ export const nikeAdapter: ProductAdapter = {
     const sizes = selected?.sizes ?? [];
     const mapped = sizes
       .map((size) => {
-        const label = size.label || size.localizedLabel;
+        const label = size.localizedLabel || size.label;
         const status = (size.status ?? "").toUpperCase();
         if (!label || !status) return null;
         return {

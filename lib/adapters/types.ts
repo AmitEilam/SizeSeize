@@ -1,3 +1,5 @@
+import { cleanSizeLabels } from "@/lib/sizes";
+
 /**
  * Layered product detection types.
  *
@@ -90,7 +92,7 @@ export function okResult(
     rawSignals?: Record<string, unknown>;
   },
 ): ProductDetectionResult {
-  const availableSizes = [...new Set(partial.availableSizes.filter(Boolean))];
+  const availableSizes = cleanSizeLabels(partial.availableSizes);
   const productInStock =
     typeof partial.productInStock === "boolean"
       ? partial.productInStock

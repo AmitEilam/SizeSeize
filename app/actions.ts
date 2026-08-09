@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkProductNow } from "@/lib/monitoring/checkProduct";
+import { cleanSizeLabel } from "@/lib/sizes";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = {
@@ -46,7 +47,8 @@ export async function addProduct(
 ): Promise<ActionState> {
   const productUrl = String(formData.get("product_url") ?? "").trim();
   const desiredSizeRaw = String(formData.get("desired_size") ?? "").trim();
-  const desiredSize = desiredSizeRaw.length > 0 ? desiredSizeRaw : null;
+  const desiredSize =
+    desiredSizeRaw.length > 0 ? cleanSizeLabel(desiredSizeRaw) || null : null;
 
   if (!productUrl) {
     return { error: "Product URL is required." };
@@ -129,7 +131,8 @@ export async function updateProductSize(
 ): Promise<ActionState> {
   const id = String(formData.get("id") ?? "");
   const desiredSizeRaw = String(formData.get("desired_size") ?? "").trim();
-  const desiredSize = desiredSizeRaw.length > 0 ? desiredSizeRaw : null;
+  const desiredSize =
+    desiredSizeRaw.length > 0 ? cleanSizeLabel(desiredSizeRaw) || null : null;
 
   if (!id) {
     return { error: "Missing product id." };
