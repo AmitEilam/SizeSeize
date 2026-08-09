@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" fill="none">
+  <!-- Black artwork for CSS mask: apparel + size monitoring -->
+  <g stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.9">
+    <path d="M48 86c42-36 98-40 138-8"/>
+    <path d="M58 78l-6 10M78 64l-4 11M100 56l-2 12M122 54l1 12M144 58l4 11M164 68l7 9"/>
+    <path d="M250 58l28-16 34 22v18l-22 8v78h-40V90l-22-8V74l22-16z"/>
+    <path d="M268 42c0-8 8-14 16-14s16 6 16 14"/>
+    <path d="M248 48h72"/>
+  </g>
+  <g fill="#000" font-family="Georgia, serif" font-size="18" font-weight="700" opacity="0.75">
+    <text x="52" y="168">XS</text>
+    <text x="108" y="168">S</text>
+    <text x="152" y="168">M</text>
+    <text x="202" y="168">L</text>
+    <text x="246" y="168">XL</text>
+  </g>
+  <g stroke="#000" stroke-width="1.35" fill="none" opacity="0.7">
+    <rect x="58" y="210" width="72" height="44" rx="8"/>
+    <circle cx="72" cy="232" r="3.2" fill="#000" stroke="none"/>
+    <path d="M160 232h180"/>
+    <path d="M160 226v12M180 228v8M200 226v12M220 228v8M240 226v12M260 228v8M280 226v12M300 228v8M320 226v12M340 228v8"/>
+  </g>
+  <g stroke="#000" stroke-width="1.45" stroke-linecap="round" fill="none" opacity="0.65">
+    <path d="M70 300v70l22 18 18-18v-40l12 40 18 18 22-18v-70"/>
+    <circle cx="320" cy="320" r="18"/>
+    <circle cx="320" cy="320" r="7" fill="#000" stroke="none" opacity="0.55"/>
+  </g>
+  <g fill="#000" font-family="Georgia, serif" font-size="15" font-weight="700" opacity="0.55">
+    <text x="300" y="380">42</text>
+    <text x="340" y="380">44</text>
+  </g>
+</svg>

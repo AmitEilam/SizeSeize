@@ -22,6 +22,9 @@
   --font-body: "Source Sans 3", "Segoe UI", sans-serif;
   --bg-glow-a: #c8ddd2;
   --bg-glow-b: #c9d8e8;
+  --bg-pattern: #0a3327;
+  --bg-pattern-opacity: 0.08;
+  --bg-fabric: rgba(10, 51, 39, 0.035);
 }
 
 [data-theme="dark"] {
@@ -43,6 +46,9 @@
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   --bg-glow-a: #1a3a2e;
   --bg-glow-b: #1a2a3a;
+  --bg-pattern: #9ad9c0;
+  --bg-pattern-opacity: 0.1;
+  --bg-fabric: rgba(157, 217, 192, 0.04);
 }
 
 @theme inline {
@@ -74,13 +80,57 @@ body {
   font-family: var(--font-body);
   font-size: 1.0625rem;
   line-height: 1.6;
-  background:
+  background-color: var(--bg);
+  background-image:
     radial-gradient(1100px 560px at 8% -12%, var(--bg-glow-a) 0%, transparent 55%),
     radial-gradient(900px 480px at 100% 0%, var(--bg-glow-b) 0%, transparent 52%),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Soft fabric wash + size/measure motif */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background-color: var(--bg-pattern);
+  opacity: var(--bg-pattern-opacity);
+  -webkit-mask-image:
+    url("/bg-measure.svg"),
+    radial-gradient(ellipse 88% 72% at 50% 28%, #000 18%, transparent 78%);
+  mask-image:
+    url("/bg-measure.svg"),
+    radial-gradient(ellipse 88% 72% at 50% 28%, #000 18%, transparent 78%);
+  -webkit-mask-size: 400px 400px, 100% 100%;
+  mask-size: 400px 400px, 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-position: 8px 20px, center;
+  mask-position: 8px 20px, center;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      125deg,
+      transparent 0%,
+      var(--bg-fabric) 32%,
+      transparent 58%
+    ),
+    radial-gradient(ellipse 50% 40% at 85% 75%, var(--bg-fabric), transparent 70%);
 }
 
 a {
@@ -410,6 +460,22 @@ input {
   color: var(--hero-fg);
   padding: 2.5rem 1.35rem;
   box-shadow: var(--shadow);
+}
+
+.ss-hero::after {
+  content: "XS  ·  S  ·  M  ·  L  ·  XL";
+  position: absolute;
+  right: -0.5rem;
+  bottom: 1.1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(244, 255, 248, 0.12);
+  pointer-events: none;
+  user-select: none;
+  transform: rotate(-8deg);
+  white-space: nowrap;
 }
 
 .ss-hero-cta {
