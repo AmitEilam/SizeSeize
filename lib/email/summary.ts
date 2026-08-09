@@ -1,9 +1,10 @@
 import { getFromAddress, getResendClient } from "@/lib/email/resend";
+import { formatDesiredSizeLabel, hasDesiredSize } from "@/lib/monitoring/sizeMatch";
 
 export type SummaryProduct = {
   productName: string | null;
   productUrl: string;
-  desiredSize: string;
+  desiredSize: string | null;
   desiredSizeAvailable: boolean;
   availableSizes: string[];
   error?: string | null;
@@ -20,13 +21,19 @@ export async function sendDailySummary(to: string, products: SummaryProduct[]) {
         : p.desiredSizeAvailable
           ? "Available"
           : "Unavailable";
+      const sizeLabel = formatDesiredSizeLabel(p.desiredSize);
+      const sizeAware = hasDesiredSize(p.desiredSize);
       return `
         <div style="padding: 14px 0; border-bottom: 1px solid #e6e2da;">
           <div style="font-size: 16px; font-weight: 700;">${escapeHtml(name)}</div>
           <div style="color:#555; margin-top: 6px; font-size: 14px; line-height: 1.5;">
-            <div>Desired size: <strong>${escapeHtml(p.desiredSize)}</strong></div>
+            <div>${sizeAware ? "Desired size" : "Monitor mode"}: <strong>${escapeHtml(sizeLabel)}</strong></div>
             <div>Status: <strong>${escapeHtml(status)}</strong></div>
-            <div>Available sizes: ${escapeHtml(p.availableSizes.join(", ") || "-")}</div>
+            ${
+              sizeAware
+                ? `<div>Available sizes: ${escapeHtml(p.availableSizes.join(", ") || "-")}</div>`
+                : ""
+            }
             <div><a href="${escapeAttr(p.productUrl)}">${escapeHtml(p.productUrl)}</a></div>
           </div>
         </div>

@@ -26,15 +26,18 @@ export function AddProductForm() {
         />
       </div>
       <div className="ss-field">
-        <label htmlFor="desired_size">Desired size</label>
+        <label htmlFor="desired_size">Desired size (optional)</label>
         <input
           id="desired_size"
           name="desired_size"
           type="text"
-          placeholder="M, L, 42..."
-          required
+          placeholder="M, L, 42… or leave empty"
           autoComplete="off"
         />
+        <p className="m-0 text-[0.85rem] text-[var(--muted)]">
+          Leave empty to monitor overall product availability (in stock / out of
+          stock).
+        </p>
       </div>
       {state.error ? (
         <p className="text-[0.95rem] text-[var(--danger)]">{state.error}</p>

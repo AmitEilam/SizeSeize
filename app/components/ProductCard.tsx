@@ -8,6 +8,7 @@ import {
   type ActionState,
 } from "@/app/actions";
 import type { MonitoredProduct } from "@/lib/types";
+import { formatDesiredSizeLabel } from "@/lib/monitoring/sizeMatch";
 
 const initial: ActionState = {};
 
@@ -52,7 +53,12 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
       ? "ss-badge-ok"
       : "ss-badge-warn";
   const statusLabel = product.last_check_error
-    ? "Check error"
+    ? product.last_check_error.toLowerCase().includes("confident") ||
+      product.last_check_error.toLowerCase().includes("unsupported")
+      ? "Unsupported"
+      : product.last_check_error.toLowerCase().includes("blocked")
+        ? "Blocked"
+        : "Check error"
     : product.desired_size_available
       ? "Available"
       : "Unavailable";
@@ -104,14 +110,22 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
         <dl className="ss-meta-list">
           <div className="ss-meta-row">
             <dt>Desired size</dt>
-            <dd className="font-semibold">{product.desired_size}</dd>
+            <dd className="font-semibold">
+              {formatDesiredSizeLabel(product.desired_size)}
+            </dd>
           </div>
           <div className="ss-meta-row">
             <dt>Available sizes</dt>
             <dd>
               {product.last_known_available_sizes?.length
                 ? product.last_known_available_sizes.join(", ")
-                : "-"}
+                : !product.last_checked_at
+                  ? "-"
+                  : product.desired_size?.trim()
+                    ? "-"
+                    : product.desired_size_available
+                      ? "In stock"
+                      : "Out of stock"}
             </dd>
           </div>
           <div className="ss-meta-row">
@@ -132,12 +146,14 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           >
             <input type="hidden" name="id" value={product.id} />
             <div className="ss-field flex-1">
-              <label htmlFor={`size-${product.id}`}>New desired size</label>
+              <label htmlFor={`size-${product.id}`}>
+                Desired size (optional)
+              </label>
               <input
                 id={`size-${product.id}`}
                 name="desired_size"
-                defaultValue={product.desired_size}
-                required
+                defaultValue={product.desired_size ?? ""}
+                placeholder="Leave empty for overall stock"
               />
             </div>
             <div className="flex gap-2">
@@ -175,7 +191,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
             className="ss-btn ss-btn-secondary"
             onClick={() => setEditing(true)}
           >
-            Edit size
+            Edit
           </button>
           <form action={checkAction}>
             <input type="hidden" name="id" value={product.id} />

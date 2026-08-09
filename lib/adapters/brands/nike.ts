@@ -1,9 +1,16 @@
 import { extractProductImageFromHtml } from "@/lib/adapters/html";
-import { assertNotBlocked, extractNextData, fetchJson, fetchText } from "@/lib/adapters/http";
 import {
-  AdapterError,
+  assertNotBlocked,
+  extractNextData,
+  fetchJson,
+  fetchText,
+} from "@/lib/adapters/http";
+import {
+  failResult,
+  okResult,
+  type PageContext,
   type ProductAdapter,
-  type ProductAvailability,
+  type ProductDetectionResult,
 } from "@/lib/adapters/types";
 
 const NIKE_CHANNEL_ID = "d9a5bc42-4b9c-4976-858a-f159cf99c647";
@@ -41,19 +48,18 @@ type NikeNextData = {
       colorwayImages?: Array<{
         portraitImg?: string;
         squarishImg?: string;
-        altText?: string;
       }>;
-      styleColor?: string;
     };
   };
 };
 
 function hostMatches(hostname: string) {
+  const host = hostname.replace(/^www\./, "");
   return (
-    hostname === "nike.com" ||
-    hostname.endsWith(".nike.com") ||
-    hostname === "nike.co.il" ||
-    hostname.endsWith(".nike.co.il")
+    host === "nike.com" ||
+    host.endsWith(".nike.com") ||
+    host === "nike.co.il" ||
+    host.endsWith(".nike.co.il")
   );
 }
 
@@ -73,7 +79,7 @@ function parseNikeContext(productUrl: string) {
     marketplace = "IL";
   }
 
-  return { styleColor, marketplace, language, origin: url.origin };
+  return { styleColor, marketplace, language };
 }
 
 export const nikeAdapter: ProductAdapter = {
@@ -81,18 +87,22 @@ export const nikeAdapter: ProductAdapter = {
 
   canHandle(url: string) {
     try {
-      return hostMatches(new URL(url).hostname.replace(/^www\./, ""));
+      return hostMatches(new URL(url).hostname);
     } catch {
       return false;
     }
   },
 
-  async fetchAvailability(url: string): Promise<ProductAvailability> {
+  async detect(
+    url: string,
+    page?: PageContext,
+  ): Promise<ProductDetectionResult> {
     const ctx = parseNikeContext(url);
     if (!ctx.styleColor) {
-      throw new AdapterError(
-        "Could not find a Nike style code in the URL (expected like DD1391-100).",
+      return failResult(
         "nike",
+        "unsupported",
+        "Could not find a Nike style code in the URL (expected like DD1391-100).",
       );
     }
 
@@ -112,14 +122,11 @@ export const nikeAdapter: ProductAdapter = {
 
     if (feed.ok && feed.data?.objects?.length) {
       const info = feed.data.objects[0]?.productInfo?.[0];
-      if (info) {
+      if (info?.skus && info.availableSkus) {
         const availabilityBySku = new Map(
-          (info.availableSkus ?? []).map((sku) => [
-            sku.skuId ?? "",
-            Boolean(sku.available),
-          ]),
+          info.availableSkus.map((sku) => [sku.skuId ?? "", Boolean(sku.available)]),
         );
-        const availableSizes = (info.skus ?? [])
+        const availableSizes = info.skus
           .filter((sku) => availabilityBySku.get(sku.id ?? "") === true)
           .map(
             (sku) =>
@@ -129,53 +136,82 @@ export const nikeAdapter: ProductAdapter = {
           )
           .filter(Boolean);
 
-        return {
+        return okResult("nike", {
           productName: info.merchProduct?.labelName,
           productImageUrl: info.imageUrls?.productImageUrl,
-          availableSizes: [...new Set(availableSizes)],
+          availableSizes,
+          confidence: "high",
           rawSignals: {
             source: "nike_product_feed",
             styleColor: ctx.styleColor,
             marketplace: ctx.marketplace,
           },
-        };
+        });
       }
     }
 
-    // Fallback: parse PDP HTML / __NEXT_DATA__
-    const page = await fetchText(url);
-    assertNotBlocked(page.status, page.text, "Nike");
-    if (!page.ok) {
-      throw new AdapterError(`Nike page fetch failed (${page.status})`, "nike");
-    }
+    const pageData = page
+      ? page
+      : await fetchText(url).then((p) => ({
+          url,
+          finalUrl: p.finalUrl,
+          html: p.text,
+          status: p.status,
+        }));
 
-    const nextData = extractNextData<NikeNextData>(page.text);
-    const selected = nextData?.props?.pageProps?.selectedProduct;
-    const sizes = selected?.sizes ?? [];
-    const availableSizes = sizes
-      .filter((size) => (size.status ?? "").toUpperCase() === "ACTIVE")
-      .map((size) => size.label || size.localizedLabel || "")
-      .filter(Boolean);
-
-    if (availableSizes.length === 0 && sizes.length === 0) {
-      throw new AdapterError(
-        "Could not read Nike size availability from the product page.",
+    if (pageData.status >= 400 || looksBlockedHtml(pageData.html, pageData.status)) {
+      return failResult(
         "nike",
+        pageData.status === 403 || pageData.status === 429 ? "blocked" : "error",
+        `Nike page/API unavailable (HTTP ${pageData.status}).`,
       );
     }
 
-    const image =
-      nextData?.props?.pageProps?.colorwayImages?.[0]?.portraitImg ||
-      nextData?.props?.pageProps?.colorwayImages?.[0]?.squarishImg ||
-      extractProductImageFromHtml(page.text, page.finalUrl) ||
-      undefined;
+    const nextData = extractNextData<NikeNextData>(pageData.html);
+    const selected = nextData?.props?.pageProps?.selectedProduct;
+    const sizes = selected?.sizes ?? [];
+    const mapped = sizes
+      .map((size) => {
+        const label = size.label || size.localizedLabel;
+        const status = (size.status ?? "").toUpperCase();
+        if (!label || !status) return null;
+        return {
+          label,
+          available:
+            status === "ACTIVE" || status === "IN_STOCK" || status === "AVAILABLE",
+        };
+      })
+      .filter((x): x is { label: string; available: boolean } => Boolean(x));
 
-    return {
+    if (mapped.length < 2) {
+      return failResult(
+        "nike",
+        "unsupported",
+        "Could not confidently read Nike size availability.",
+      );
+    }
+
+    return okResult("nike", {
       productName:
         selected?.productInfo?.fullTitle || selected?.productInfo?.title,
-      productImageUrl: image,
-      availableSizes: [...new Set(availableSizes)],
+      productImageUrl:
+        nextData?.props?.pageProps?.colorwayImages?.[0]?.portraitImg ||
+        nextData?.props?.pageProps?.colorwayImages?.[0]?.squarishImg ||
+        extractProductImageFromHtml(pageData.html, pageData.finalUrl) ||
+        undefined,
+      availableSizes: mapped.filter((m) => m.available).map((m) => m.label),
+      confidence: "medium",
       rawSignals: { source: "nike_next_data", styleColor: ctx.styleColor },
-    };
+    });
   },
 };
+
+function looksBlockedHtml(html: string, status: number) {
+  const lower = html.toLowerCase();
+  return (
+    status === 403 ||
+    status === 429 ||
+    lower.includes("access denied") ||
+    lower.includes("captcha")
+  );
+}

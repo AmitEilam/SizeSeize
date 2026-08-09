@@ -1,10 +1,12 @@
-import { fetchProductAvailability } from "@/lib/adapters/registry";
-import { isDesiredSizeAvailable } from "@/lib/monitoring/sizeMatch";
+import { detectProductAvailability } from "@/lib/adapters/detect";
+import {
+  canEvaluateMonitorTarget,
+  isMonitorTargetAvailable,
+} from "@/lib/monitoring/sizeMatch";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * On-demand check for a single product owned by the current user.
- * Useful for validating adapters before relying on the daily cron.
  */
 export async function checkProductNow(productId: string) {
   const supabase = await createClient();
@@ -27,25 +29,28 @@ export async function checkProductNow(productId: string) {
     throw new Error("Product not found");
   }
 
-  try {
-    const availability = await fetchProductAvailability(product.product_url);
-    const desiredAvailable = isDesiredSizeAvailable(
-      product.desired_size,
-      availability.availableSizes,
-    );
-    const now = new Date().toISOString();
-    const nextImage =
-      availability.productImageUrl ?? product.product_image_url ?? null;
+  const detection = await detectProductAvailability(product.product_url);
+  const now = new Date().toISOString();
+
+  if (detection.status !== "ok") {
+    const message =
+      detection.message ||
+      (detection.status === "unsupported"
+        ? "Unable to confidently detect availability for this product page."
+        : detection.status === "blocked"
+          ? "The product site blocked automated access."
+          : "Detection failed.");
 
     const { data: updated, error: updateError } = await supabase
       .from("monitored_products")
       .update({
-        product_name: availability.productName ?? product.product_name,
-        product_image_url: nextImage,
-        last_known_available_sizes: availability.availableSizes,
-        desired_size_available: desiredAvailable,
+        product_name: detection.productName ?? product.product_name,
+        product_image_url:
+          detection.productImageUrl ?? product.product_image_url,
+        last_known_available_sizes: [],
+        desired_size_available: false,
         last_checked_at: now,
-        last_check_error: null,
+        last_check_error: message,
         updated_at: now,
       })
       .eq("id", productId)
@@ -58,19 +63,71 @@ export async function checkProductNow(productId: string) {
 
     return {
       product: updated,
-      imageFound: Boolean(availability.productImageUrl),
+      imageFound: Boolean(detection.productImageUrl),
+      detectionStatus: detection.status,
+      adapterId: detection.adapterId,
     };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Check failed";
-    const now = new Date().toISOString();
-    await supabase
+  }
+
+  const evaluable = canEvaluateMonitorTarget(product.desired_size, detection);
+  if (!evaluable.ok) {
+    const { data: updated, error: updateError } = await supabase
       .from("monitored_products")
       .update({
+        product_name: detection.productName ?? product.product_name,
+        product_image_url:
+          detection.productImageUrl ?? product.product_image_url,
+        last_known_available_sizes: detection.availableSizes,
+        desired_size_available: false,
         last_checked_at: now,
-        last_check_error: message,
+        last_check_error: evaluable.message,
         updated_at: now,
       })
-      .eq("id", productId);
-    throw new Error(message);
+      .eq("id", productId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+
+    return {
+      product: updated,
+      imageFound: Boolean(detection.productImageUrl),
+      detectionStatus: "unsupported" as const,
+      adapterId: detection.adapterId,
+    };
   }
+
+  const desiredAvailable = isMonitorTargetAvailable(
+    product.desired_size,
+    detection,
+  );
+
+  const { data: updated, error: updateError } = await supabase
+    .from("monitored_products")
+    .update({
+      product_name: detection.productName ?? product.product_name,
+      product_image_url:
+        detection.productImageUrl ?? product.product_image_url ?? null,
+      last_known_available_sizes: detection.availableSizes,
+      desired_size_available: desiredAvailable,
+      last_checked_at: now,
+      last_check_error: null,
+      updated_at: now,
+    })
+    .eq("id", productId)
+    .select()
+    .single();
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  return {
+    product: updated,
+    imageFound: Boolean(detection.productImageUrl),
+    detectionStatus: detection.status,
+    adapterId: detection.adapterId,
+  };
 }

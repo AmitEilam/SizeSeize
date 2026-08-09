@@ -26,7 +26,7 @@ create table if not exists public.monitored_products (
   product_url text not null,
   product_name text,
   product_image_url text,
-  desired_size text not null,
+  desired_size text,
   last_known_available_sizes text[] not null default '{}',
   desired_size_available boolean not null default false,
   last_checked_at timestamptz,

@@ -1,9 +1,14 @@
-import { extractProductImageFromHtml, normalizeImageUrl } from "@/lib/adapters/html";
-import { assertNotBlocked, fetchText } from "@/lib/adapters/http";
 import {
-  AdapterError,
+  extractProductImageFromHtml,
+  normalizeImageUrl,
+} from "@/lib/adapters/html";
+import { fetchText } from "@/lib/adapters/http";
+import {
+  failResult,
+  okResult,
+  type PageContext,
   type ProductAdapter,
-  type ProductAvailability,
+  type ProductDetectionResult,
 } from "@/lib/adapters/types";
 
 type NextOption = {
@@ -14,13 +19,14 @@ type NextOption = {
 };
 
 function hostMatches(hostname: string) {
+  const host = hostname.replace(/^www\./, "");
   return (
-    hostname === "next.co.uk" ||
-    hostname.endsWith(".next.co.uk") ||
-    hostname === "next.co.il" ||
-    hostname.endsWith(".next.co.il") ||
-    hostname === "nextdirect.com" ||
-    hostname.endsWith(".nextdirect.com")
+    host === "next.co.uk" ||
+    host.endsWith(".next.co.uk") ||
+    host === "next.co.il" ||
+    host.endsWith(".next.co.il") ||
+    host === "nextdirect.com" ||
+    host.endsWith(".nextdirect.com")
   );
 }
 
@@ -36,8 +42,6 @@ function isInStock(status: string | undefined) {
 
 function extractOptionsFromHtml(html: string): NextOption[] {
   const options: NextOption[] = [];
-
-  // Common Next payload shapes
   const patterns = [
     /"options"\s*:\s*\{[\s\S]*?"options"\s*:\s*(\[[\s\S]*?\])\s*\}/i,
     /"SizeOptions"\s*:\s*(\[[\s\S]*?\])/i,
@@ -58,7 +62,6 @@ function extractOptionsFromHtml(html: string): NextOption[] {
     }
   }
 
-  // Fallback: discrete stock_status records
   if (options.length === 0) {
     const re =
       /"name"\s*:\s*"([^"]+)"\s*,\s*"value"\s*:\s*"[^"]*"\s*,\s*(?:"price"[^,]*\s*,\s*)?"stock_status"\s*:\s*"([^"]+)"/gi;
@@ -76,52 +79,71 @@ export const nextAdapter: ProductAdapter = {
 
   canHandle(url: string) {
     try {
-      return hostMatches(new URL(url).hostname.replace(/^www\./, ""));
+      return hostMatches(new URL(url).hostname);
     } catch {
       return false;
     }
   },
 
-  async fetchAvailability(url: string): Promise<ProductAvailability> {
-    const page = await fetchText(url);
-    assertNotBlocked(page.status, page.text, "Next");
-    if (!page.ok) {
-      throw new AdapterError(`Next page fetch failed (${page.status})`, "next");
+  async detect(
+    url: string,
+    page?: PageContext,
+  ): Promise<ProductDetectionResult> {
+    const pageData = page
+      ? page
+      : await fetchText(url).then((p) => ({
+          url,
+          finalUrl: p.finalUrl,
+          html: p.text,
+          status: p.status,
+        }));
+
+    if (pageData.status === 403 || pageData.status === 429) {
+      return failResult("next", "blocked", "Next blocked the product page.");
+    }
+    if (pageData.status >= 400) {
+      return failResult(
+        "next",
+        "error",
+        `Next page fetch failed (${pageData.status}).`,
+      );
     }
 
-    const html = page.text;
-    const options = extractOptionsFromHtml(html);
-    const availableSizes = options
+    const options = extractOptionsFromHtml(pageData.html);
+    const withStatus = options.filter(
+      (opt) => opt.stock_status || opt.StockStatus,
+    );
+
+    if (withStatus.length < 2) {
+      return failResult(
+        "next",
+        "unsupported",
+        "Could not confidently read Next size stock statuses.",
+        { optionCount: options.length },
+      );
+    }
+
+    const availableSizes = withStatus
       .filter((opt) => isInStock(opt.stock_status || opt.StockStatus))
       .map((opt) => opt.name || opt.value || "")
       .filter(Boolean);
 
-    if (availableSizes.length === 0 && options.length === 0) {
-      throw new AdapterError(
-        "Could not read Next size availability. The site may be blocking automated checks.",
-        "next",
-      );
-    }
-
-    const productName =
-      html.match(/property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
-      html.match(/content=["']([^"']+)["'][^>]+property=["']og:title["']/i)?.[1];
-
     const imagePath =
-      html.match(/"image_url"\s*:\s*"([^"]+)"/i)?.[1] ||
-      html.match(/"ImageUrl"\s*:\s*"([^"]+)"/i)?.[1];
+      pageData.html.match(/"image_url"\s*:\s*"([^"]+)"/i)?.[1] ||
+      pageData.html.match(/"ImageUrl"\s*:\s*"([^"]+)"/i)?.[1];
 
-    return {
-      productName,
+    return okResult("next", {
+      productName:
+        pageData.html.match(
+          /property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+        )?.[1],
       productImageUrl:
-        normalizeImageUrl(imagePath, page.finalUrl) ||
-        extractProductImageFromHtml(html, page.finalUrl) ||
+        normalizeImageUrl(imagePath, pageData.finalUrl) ||
+        extractProductImageFromHtml(pageData.html, pageData.finalUrl) ||
         undefined,
-      availableSizes: [...new Set(availableSizes)],
-      rawSignals: {
-        source: "next_html",
-        optionCount: options.length,
-      },
-    };
+      availableSizes,
+      confidence: "medium",
+      rawSignals: { source: "next_stock_options", optionCount: withStatus.length },
+    });
   },
 };

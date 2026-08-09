@@ -1,16 +1,19 @@
-import { extractProductImageFromHtml, normalizeImageUrl } from "@/lib/adapters/html";
-import { assertNotBlocked, fetchJson, fetchText } from "@/lib/adapters/http";
 import {
-  AdapterError,
+  extractProductImageFromHtml,
+  normalizeImageUrl,
+} from "@/lib/adapters/html";
+import { fetchJson, fetchText } from "@/lib/adapters/http";
+import {
+  failResult,
+  okResult,
+  type PageContext,
   type ProductAdapter,
-  type ProductAvailability,
+  type ProductDetectionResult,
 } from "@/lib/adapters/types";
 
 type AdidasAvailability = {
-  id?: string;
   availability_status?: string;
   variation_list?: Array<{
-    sku?: string;
     size?: string;
     availability?: number | string;
     availability_status?: string;
@@ -18,13 +21,11 @@ type AdidasAvailability = {
 };
 
 type AdidasProduct = {
-  id?: string;
   name?: string;
   title?: string;
   product_description?: { title?: string };
-  view_list?: Array<{ image_url?: string; type?: string }>;
+  view_list?: Array<{ image_url?: string }>;
   images?: Array<{ src?: string; url?: string }>;
-  sizing?: { sizes?: Array<{ size?: string; value?: string }> };
 };
 
 function hostMatches(hostname: string) {
@@ -40,8 +41,9 @@ function extractProductId(productUrl: string): string | null {
   const url = new URL(productUrl);
   const fromHtmlPath = url.pathname.match(/\/([A-Z0-9]{5,12})(?:\.html)?\/?$/i);
   if (fromHtmlPath) return fromHtmlPath[1].toUpperCase();
-  const fromQuery = url.searchParams.get("productId") || url.searchParams.get("sku");
-  return fromQuery ? fromQuery.toUpperCase() : null;
+  return (
+    url.searchParams.get("productId") || url.searchParams.get("sku") || null
+  )?.toUpperCase() ?? null;
 }
 
 function sitePathFromUrl(productUrl: string): string | null {
@@ -65,18 +67,22 @@ export const adidasAdapter: ProductAdapter = {
 
   canHandle(url: string) {
     try {
-      return hostMatches(new URL(url).hostname.replace(/^www\./, ""));
+      return hostMatches(new URL(url).hostname);
     } catch {
       return false;
     }
   },
 
-  async fetchAvailability(url: string): Promise<ProductAvailability> {
+  async detect(
+    url: string,
+    page?: PageContext,
+  ): Promise<ProductDetectionResult> {
     const productId = extractProductId(url);
     if (!productId) {
-      throw new AdapterError(
-        "Could not find an Adidas product ID in the URL (expected like B75806.html).",
+      return failResult(
         "adidas",
+        "unsupported",
+        "Could not find an Adidas product ID in the URL.",
       );
     }
 
@@ -90,31 +96,27 @@ export const adidasAdapter: ProductAdapter = {
       (sitePath ? `?sitePath=${sitePath}` : "");
 
     const availability = await fetchJson<AdidasAvailability>(availabilityUrl, {
-      headers: {
-        Accept: "application/json",
-        Referer: url,
-        Origin: origin,
-      },
+      headers: { Accept: "application/json", Referer: url, Origin: origin },
     });
 
-    let productName: string | undefined;
-    let productImageUrl: string | undefined;
-    let availableSizes: string[] = [];
+    if (availability.ok && availability.data?.variation_list?.length) {
+      const list = availability.data.variation_list;
+      const sized = list.filter((v) => Boolean(v.size));
+      if (sized.length < 1) {
+        return failResult(
+          "adidas",
+          "unsupported",
+          "Adidas availability payload had no size labels.",
+        );
+      }
 
-    if (availability.ok && availability.data?.variation_list) {
-      availableSizes = availability.data.variation_list
-        .filter(isInStock)
-        .map((v) => v.size || "")
-        .filter(Boolean);
+      const availableSizes = sized.filter(isInStock).map((v) => v.size as string);
+      let productName: string | undefined;
+      let productImageUrl: string | undefined;
 
       const product = await fetchJson<AdidasProduct>(productApiUrl, {
-        headers: {
-          Accept: "application/json",
-          Referer: url,
-          Origin: origin,
-        },
+        headers: { Accept: "application/json", Referer: url, Origin: origin },
       });
-
       if (product.ok && product.data) {
         productName =
           product.data.name ||
@@ -127,65 +129,72 @@ export const adidasAdapter: ProductAdapter = {
           undefined;
       }
 
-      return {
+      return okResult("adidas", {
         productName,
         productImageUrl,
-        availableSizes: [...new Set(availableSizes)],
+        availableSizes,
+        confidence: "high",
         rawSignals: {
           source: "adidas_api",
           productId,
           availability_status: availability.data.availability_status,
         },
-      };
+      });
     }
 
-    // HTML fallback when API is bot-blocked
-    const page = await fetchText(url, {
-      headers: { Referer: origin },
-    });
-    assertNotBlocked(page.status, page.text, "Adidas");
-    if (!page.ok) {
-      throw new AdapterError(
-        `Adidas page/API unavailable (${availability.status || page.status}).`,
+    if (availability.status === 403 || availability.status === 429) {
+      return failResult(
         "adidas",
+        "blocked",
+        "Adidas blocked the availability API request.",
+        { status: availability.status },
       );
     }
 
-    const html = page.text;
-    productName =
-      html.match(/property=["']og:title["'][^>]+content=["']([^"']+)["']/i)?.[1] ||
-      html.match(/content=["']([^"']+)["'][^>]+property=["']og:title["']/i)?.[1];
-    productImageUrl =
-      extractProductImageFromHtml(html, page.finalUrl) ?? undefined;
+    const pageData = page
+      ? page
+      : await fetchText(url).then((p) => ({
+          url,
+          finalUrl: p.finalUrl,
+          html: p.text,
+          status: p.status,
+        }));
 
-    // Embedded availability JSON sometimes appears in script tags
-    const embed = html.match(
+    if (pageData.status === 403 || pageData.status === 429) {
+      return failResult("adidas", "blocked", "Adidas blocked the product page.");
+    }
+
+    const embed = pageData.html.match(
       /"variation_list"\s*:\s*(\[[\s\S]*?\])\s*,\s*"availability_status"/,
     );
     if (embed) {
       try {
         const list = JSON.parse(embed[1]) as AdidasAvailability["variation_list"];
-        availableSizes = (list ?? [])
-          .filter(isInStock)
-          .map((v) => v.size || "")
-          .filter(Boolean);
+        const sized = (list ?? []).filter((v) => Boolean(v.size));
+        if (sized.length >= 1) {
+          return okResult("adidas", {
+            productName:
+              pageData.html.match(
+                /property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+              )?.[1],
+            productImageUrl:
+              extractProductImageFromHtml(pageData.html, pageData.finalUrl) ??
+              undefined,
+            availableSizes: sized.filter(isInStock).map((v) => v.size as string),
+            confidence: "medium",
+            rawSignals: { source: "adidas_embedded_json", productId },
+          });
+        }
       } catch {
-        // ignore
+        // fall through
       }
     }
 
-    if (availableSizes.length === 0) {
-      throw new AdapterError(
-        "Could not read Adidas size availability. The site may be blocking automated checks.",
-        "adidas",
-      );
-    }
-
-    return {
-      productName,
-      productImageUrl,
-      availableSizes: [...new Set(availableSizes)],
-      rawSignals: { source: "adidas_html", productId },
-    };
+    return failResult(
+      "adidas",
+      "unsupported",
+      "Could not confidently read Adidas size availability.",
+      { apiStatus: availability.status },
+    );
   },
 };

@@ -40,10 +40,9 @@ export default async function DashboardPage() {
         <div>
           <h1 className="ss-page-title">Monitored products</h1>
           <p className="ss-page-lead">
-            Add product URLs and the size you want. SizeSeize checks stock daily
-            at 12:00 PM and emails you when your size becomes available. Works
-            with Shopify stores, Nike, Adidas, Next, ASOS, and selected Israeli
-            fashion sites.
+            Add product URLs and the size you want. SizeSeize uses layered
+            detection (site-specific → Shopify → structured data → DOM) and
+            only records sizes when confidence is clear.
           </p>
         </div>
 

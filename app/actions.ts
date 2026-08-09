@@ -45,10 +45,11 @@ export async function addProduct(
   formData: FormData,
 ): Promise<ActionState> {
   const productUrl = String(formData.get("product_url") ?? "").trim();
-  const desiredSize = String(formData.get("desired_size") ?? "").trim();
+  const desiredSizeRaw = String(formData.get("desired_size") ?? "").trim();
+  const desiredSize = desiredSizeRaw.length > 0 ? desiredSizeRaw : null;
 
-  if (!productUrl || !desiredSize) {
-    return { error: "Product URL and desired size are required." };
+  if (!productUrl) {
+    return { error: "Product URL is required." };
   }
 
   try {
@@ -79,7 +80,11 @@ export async function addProduct(
   }
 
   revalidatePath("/dashboard");
-  return { success: "Product added." };
+  return {
+    success: desiredSize
+      ? "Product added."
+      : "Product added. Monitoring overall availability.",
+  };
 }
 
 export async function updateProductSize(
@@ -87,10 +92,11 @@ export async function updateProductSize(
   formData: FormData,
 ): Promise<ActionState> {
   const id = String(formData.get("id") ?? "");
-  const desiredSize = String(formData.get("desired_size") ?? "").trim();
+  const desiredSizeRaw = String(formData.get("desired_size") ?? "").trim();
+  const desiredSize = desiredSizeRaw.length > 0 ? desiredSizeRaw : null;
 
-  if (!id || !desiredSize) {
-    return { error: "Size is required." };
+  if (!id) {
+    return { error: "Missing product id." };
   }
 
   const supabase = await createClient();
@@ -117,7 +123,11 @@ export async function updateProductSize(
   }
 
   revalidatePath("/dashboard");
-  return { success: "Size updated." };
+  return {
+    success: desiredSize
+      ? "Size updated."
+      : "Now monitoring overall availability.",
+  };
 }
 
 export async function deleteProduct(formData: FormData) {
@@ -149,10 +159,28 @@ export async function runCheckNow(
   try {
     const result = await checkProductNow(id);
     revalidatePath("/dashboard");
+
+    if (result.detectionStatus === "unsupported") {
+      return {
+        error:
+          "Unable to confidently detect availability for this product page. No guess was made.",
+      };
+    }
+    if (result.detectionStatus === "blocked") {
+      return {
+        error: "The product site blocked automated access.",
+      };
+    }
+    if (result.detectionStatus !== "ok") {
+      return {
+        error: "Detection failed for this product page.",
+      };
+    }
+
     return {
       success: result.imageFound
-        ? "Checked just now. Product image saved."
-        : "Checked just now. No product image found on the page.",
+        ? `Checked via ${result.adapterId}. Product image saved.`
+        : `Checked via ${result.adapterId}.`,
     };
   } catch (err) {
     revalidatePath("/dashboard");

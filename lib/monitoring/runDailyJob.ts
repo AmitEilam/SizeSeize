@@ -1,7 +1,10 @@
-import { fetchProductAvailability } from "@/lib/adapters/registry";
+import { detectProductAvailability } from "@/lib/adapters/detect";
 import { sendAvailabilityAlert } from "@/lib/email/alert";
 import { sendDailySummary, type SummaryProduct } from "@/lib/email/summary";
-import { isDesiredSizeAvailable } from "@/lib/monitoring/sizeMatch";
+import {
+  canEvaluateMonitorTarget,
+  isMonitorTargetAvailable,
+} from "@/lib/monitoring/sizeMatch";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { MonitoredProduct } from "@/lib/types";
 
@@ -10,17 +13,19 @@ export type JobReport = {
   alertsSent: number;
   summariesSent: number;
   failures: number;
+  unsupported: number;
   details: Array<{
     productId: string;
     ok: boolean;
     alerted?: boolean;
     error?: string;
+    adapterId?: string;
   }>;
 };
 
 /**
- * Shared monitoring entrypoint. Schedule frequency is controlled by the cron
- * caller (daily on Hobby today; hourly later without rewriting this logic).
+ * Shared monitoring entrypoint.
+ * Uses layered detection; never invents sizes when confidence is low.
  */
 export async function runMonitoringJob(): Promise<JobReport> {
   const supabase = createAdminClient();
@@ -40,6 +45,7 @@ export async function runMonitoringJob(): Promise<JobReport> {
     alertsSent: 0,
     summariesSent: 0,
     failures: 0,
+    unsupported: 0,
     details: [],
   };
 
@@ -48,7 +54,6 @@ export async function runMonitoringJob(): Promise<JobReport> {
     { email: string; items: SummaryProduct[] }
   >();
 
-  // Prefetch emails for users
   const userIds = [...new Set(rows.map((r) => r.user_id))];
   const emailByUser = new Map<string, string>();
 
@@ -66,22 +71,113 @@ export async function runMonitoringJob(): Promise<JobReport> {
   for (const product of rows) {
     report.checked += 1;
     const email = emailByUser.get(product.user_id);
+    const now = new Date().toISOString();
 
     try {
-      const availability = await fetchProductAvailability(product.product_url);
-      const desiredAvailable = isDesiredSizeAvailable(
+      const detection = await detectProductAvailability(product.product_url);
+
+      if (detection.status !== "ok") {
+        if (detection.status === "unsupported") report.unsupported += 1;
+        else report.failures += 1;
+
+        const message =
+          detection.message ||
+          "Unable to confidently detect availability for this product page.";
+
+        await supabase
+          .from("monitored_products")
+          .update({
+            product_name: detection.productName ?? product.product_name,
+            product_image_url:
+              detection.productImageUrl ?? product.product_image_url,
+            last_known_available_sizes: [],
+            desired_size_available: false,
+            last_checked_at: now,
+            last_check_error: message,
+            updated_at: now,
+          })
+          .eq("id", product.id);
+
+        if (email) {
+          const bucket = summaryByUser.get(product.user_id) ?? {
+            email,
+            items: [],
+          };
+          bucket.items.push({
+            productName: detection.productName ?? product.product_name,
+            productUrl: product.product_url,
+            desiredSize: product.desired_size,
+            desiredSizeAvailable: false,
+            availableSizes: [],
+            error: message,
+          });
+          summaryByUser.set(product.user_id, bucket);
+        }
+
+        report.details.push({
+          productId: product.id,
+          ok: false,
+          error: message,
+          adapterId: detection.adapterId,
+        });
+        continue;
+      }
+
+      const evaluable = canEvaluateMonitorTarget(product.desired_size, detection);
+      if (!evaluable.ok) {
+        report.unsupported += 1;
+
+        await supabase
+          .from("monitored_products")
+          .update({
+            product_name: detection.productName ?? product.product_name,
+            product_image_url:
+              detection.productImageUrl ?? product.product_image_url,
+            last_known_available_sizes: detection.availableSizes,
+            desired_size_available: false,
+            last_checked_at: now,
+            last_check_error: evaluable.message,
+            updated_at: now,
+          })
+          .eq("id", product.id);
+
+        if (email) {
+          const bucket = summaryByUser.get(product.user_id) ?? {
+            email,
+            items: [],
+          };
+          bucket.items.push({
+            productName: detection.productName ?? product.product_name,
+            productUrl: product.product_url,
+            desiredSize: product.desired_size,
+            desiredSizeAvailable: false,
+            availableSizes: detection.availableSizes,
+            error: evaluable.message,
+          });
+          summaryByUser.set(product.user_id, bucket);
+        }
+
+        report.details.push({
+          productId: product.id,
+          ok: false,
+          error: evaluable.message,
+          adapterId: detection.adapterId,
+        });
+        continue;
+      }
+
+      const desiredAvailable = isMonitorTargetAvailable(
         product.desired_size,
-        availability.availableSizes,
+        detection,
       );
       const becameAvailable =
         !product.desired_size_available && desiredAvailable;
 
-      const now = new Date().toISOString();
       const updates: Record<string, unknown> = {
-        product_name: availability.productName ?? product.product_name,
+        product_name: detection.productName ?? product.product_name,
         product_image_url:
-          availability.productImageUrl ?? product.product_image_url,
-        last_known_available_sizes: availability.availableSizes,
+          detection.productImageUrl ?? product.product_image_url,
+        last_known_available_sizes: detection.availableSizes,
         desired_size_available: desiredAvailable,
         last_checked_at: now,
         last_check_error: null,
@@ -92,10 +188,10 @@ export async function runMonitoringJob(): Promise<JobReport> {
       if (becameAvailable && email) {
         await sendAvailabilityAlert({
           to: email,
-          productName: availability.productName ?? product.product_name ?? "",
+          productName: detection.productName ?? product.product_name ?? "",
           productUrl: product.product_url,
           desiredSize: product.desired_size,
-          availableSizes: availability.availableSizes,
+          availableSizes: detection.availableSizes,
         });
         updates.last_notification_sent_at = now;
         report.alertsSent += 1;
@@ -113,20 +209,24 @@ export async function runMonitoringJob(): Promise<JobReport> {
           items: [],
         };
         bucket.items.push({
-          productName: availability.productName ?? product.product_name,
+          productName: detection.productName ?? product.product_name,
           productUrl: product.product_url,
           desiredSize: product.desired_size,
           desiredSizeAvailable: desiredAvailable,
-          availableSizes: availability.availableSizes,
+          availableSizes: detection.availableSizes,
         });
         summaryByUser.set(product.user_id, bucket);
       }
 
-      report.details.push({ productId: product.id, ok: true, alerted });
+      report.details.push({
+        productId: product.id,
+        ok: true,
+        alerted,
+        adapterId: detection.adapterId,
+      });
     } catch (err) {
       report.failures += 1;
       const message = err instanceof Error ? err.message : "Unknown error";
-      const now = new Date().toISOString();
 
       await supabase
         .from("monitored_products")

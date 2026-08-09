@@ -1,15 +1,15 @@
 import { extractProductImageFromHtml } from "@/lib/adapters/html";
-import { assertNotBlocked, fetchJson, fetchText } from "@/lib/adapters/http";
+import { fetchJson, fetchText } from "@/lib/adapters/http";
 import {
-  AdapterError,
+  failResult,
+  okResult,
+  type PageContext,
   type ProductAdapter,
-  type ProductAvailability,
+  type ProductDetectionResult,
 } from "@/lib/adapters/types";
 
 type AsosStockResponse = Array<{
   productId?: number;
-  productCode?: string;
-  isInStock?: boolean;
   variants?: Array<{
     brandSize?: string;
     size?: string;
@@ -19,19 +19,17 @@ type AsosStockResponse = Array<{
 }>;
 
 function hostMatches(hostname: string) {
-  return hostname === "asos.com" || hostname.endsWith(".asos.com");
+  const host = hostname.replace(/^www\./, "");
+  return host === "asos.com" || host.endsWith(".asos.com");
 }
 
 function extractProductId(productUrl: string): string | null {
   const url = new URL(productUrl);
-  const fromPath = url.pathname.match(/\/prd\/(\d+)/i)?.[1];
-  if (fromPath) return fromPath;
-  return url.searchParams.get("iid") || url.searchParams.get("productId");
-}
-
-function storeFromHost(hostname: string) {
-  if (hostname.includes("asos.com")) return "COM";
-  return "COM";
+  return (
+    url.pathname.match(/\/prd\/(\d+)/i)?.[1] ||
+    url.searchParams.get("iid") ||
+    url.searchParams.get("productId")
+  );
 }
 
 export const asosAdapter: ProductAdapter = {
@@ -39,71 +37,74 @@ export const asosAdapter: ProductAdapter = {
 
   canHandle(url: string) {
     try {
-      return hostMatches(new URL(url).hostname.replace(/^www\./, ""));
+      return hostMatches(new URL(url).hostname);
     } catch {
       return false;
     }
   },
 
-  async fetchAvailability(url: string): Promise<ProductAvailability> {
+  async detect(
+    url: string,
+    _page?: PageContext,
+  ): Promise<ProductDetectionResult> {
     const productId = extractProductId(url);
     if (!productId) {
-      throw new AdapterError(
-        "Could not find an ASOS product id in the URL (expected /prd/123456).",
+      return failResult(
         "asos",
+        "unsupported",
+        "Could not find an ASOS product id in the URL.",
       );
     }
 
-    const host = new URL(url).hostname;
-    const store = storeFromHost(host);
     const apiUrl =
       `https://www.asos.com/api/product/catalogue/v3/stockprice` +
-      `?productIds=${encodeURIComponent(productId)}&store=${store}&currency=GBP`;
+      `?productIds=${encodeURIComponent(productId)}&store=COM&currency=GBP`;
 
     const stock = await fetchJson<AsosStockResponse>(apiUrl, {
-      headers: {
-        Accept: "application/json",
-        Referer: url,
-      },
+      headers: { Accept: "application/json", Referer: url },
     });
 
-    if (stock.ok && Array.isArray(stock.data) && stock.data[0]) {
-      const item = stock.data[0];
-      const availableSizes = (item.variants ?? [])
-        .filter((v) => v.isInStock || v.isAvailable)
-        .map((v) => v.brandSize || v.size || "")
-        .filter(Boolean);
-
-      // Name/image from PDP as enrichment
-      let productName: string | undefined;
-      let productImageUrl: string | undefined;
-      try {
-        const page = await fetchText(url);
-        if (page.ok) {
-          productName =
-            page.text.match(
-              /property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
-            )?.[1] || undefined;
-          productImageUrl =
-            extractProductImageFromHtml(page.text, page.finalUrl) ?? undefined;
-        }
-      } catch {
-        // optional
-      }
-
-      return {
-        productName,
-        productImageUrl,
-        availableSizes: [...new Set(availableSizes)],
-        rawSignals: { source: "asos_stockprice", productId },
-      };
+    if (stock.status === 403 || stock.status === 429) {
+      return failResult("asos", "blocked", "ASOS blocked the stock API.");
     }
 
-    const page = await fetchText(url);
-    assertNotBlocked(page.status, page.text, "ASOS");
-    throw new AdapterError(
-      `Could not read ASOS stock (API ${stock.status}). The site may be blocking automated checks.`,
-      "asos",
-    );
+    if (!stock.ok || !Array.isArray(stock.data) || !stock.data[0]?.variants) {
+      return failResult(
+        "asos",
+        "unsupported",
+        "Could not confidently read ASOS stock variants.",
+        { apiStatus: stock.status },
+      );
+    }
+
+    const variants = stock.data[0].variants;
+    const availableSizes = variants
+      .filter((v) => v.isInStock === true || v.isAvailable === true)
+      .map((v) => v.brandSize || v.size || "")
+      .filter(Boolean);
+
+    let productName: string | undefined;
+    let productImageUrl: string | undefined;
+    try {
+      const page = await fetchText(url);
+      if (page.ok) {
+        productName =
+          page.text.match(
+            /property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+          )?.[1] || undefined;
+        productImageUrl =
+          extractProductImageFromHtml(page.text, page.finalUrl) ?? undefined;
+      }
+    } catch {
+      // optional enrichment
+    }
+
+    return okResult("asos", {
+      productName,
+      productImageUrl,
+      availableSizes,
+      confidence: "high",
+      rawSignals: { source: "asos_stockprice", productId },
+    });
   },
 };

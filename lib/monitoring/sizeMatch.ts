@@ -20,7 +20,6 @@ export function normalizeSize(size: string): string {
     return HEBREW_SIZE_ALIASES[trimmed];
   }
 
-  // Collapse common fashion size tokens
   return trimmed
     .replace(/^size\s+/i, "")
     .replace(/^מידה\s+/i, "")
@@ -39,6 +38,77 @@ export function isDesiredSizeAvailable(
   availableSizes: string[],
 ): boolean {
   return availableSizes.some((size) => sizesMatch(desiredSize, size));
+}
+
+export function hasDesiredSize(desiredSize: string | null | undefined): boolean {
+  return Boolean(desiredSize?.trim());
+}
+
+/**
+ * Resolve whether the user's monitor target is currently available.
+ * - With a desired size: match against availableSizes
+ * - Without a size: use overall productInStock (or any available size as fallback)
+ */
+export function isMonitorTargetAvailable(
+  desiredSize: string | null | undefined,
+  detection: {
+    availableSizes: string[];
+    productInStock?: boolean;
+  },
+): boolean {
+  if (hasDesiredSize(desiredSize)) {
+    return isDesiredSizeAvailable(desiredSize!.trim(), detection.availableSizes);
+  }
+
+  if (typeof detection.productInStock === "boolean") {
+    return detection.productInStock;
+  }
+
+  return detection.availableSizes.length > 0;
+}
+
+/**
+ * Size monitoring needs size-aware detection.
+ * Overall stock monitoring works with sizeAware or stock-only results.
+ */
+export function canEvaluateMonitorTarget(
+  desiredSize: string | null | undefined,
+  detection: {
+    sizeAware?: boolean;
+    productInStock?: boolean;
+    availableSizes: string[];
+  },
+): { ok: true } | { ok: false; message: string } {
+  if (hasDesiredSize(desiredSize)) {
+    if (detection.sizeAware === false) {
+      return {
+        ok: false,
+        message:
+          "This product page does not expose sizes. Leave desired size empty to monitor overall availability.",
+      };
+    }
+    return { ok: true };
+  }
+
+  if (
+    typeof detection.productInStock === "boolean" ||
+    detection.sizeAware !== false ||
+    detection.availableSizes.length > 0
+  ) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    message: "Unable to confidently detect product availability for this page.",
+  };
+}
+
+export function formatDesiredSizeLabel(
+  desiredSize: string | null | undefined,
+): string {
+  const trimmed = desiredSize?.trim();
+  return trimmed ? trimmed : "Overall availability";
 }
 
 /** EN/HE unavailability phrases - fallback only when structured signals are missing. */
