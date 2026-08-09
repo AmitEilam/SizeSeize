@@ -76,13 +76,17 @@ export async function fetchJson<T>(
 
 export function assertNotBlocked(status: number, body: string, site: string) {
   const lower = body.toLowerCase();
-  if (
-    status === 403 ||
-    status === 429 ||
-    lower.includes("access denied") ||
-    lower.includes("captcha") ||
-    lower.includes("cf-challenge")
-  ) {
+  const title =
+    lower.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.trim() ?? "";
+  const blockedStatus = status === 403 || status === 429;
+  const challengePage =
+    lower.includes("cf-browser-verification") ||
+    lower.includes("cdn-cgi/challenge-platform") ||
+    title.includes("just a moment") ||
+    (title.includes("attention required") && lower.includes("cloudflare")) ||
+    title.includes("access denied");
+
+  if (blockedStatus || challengePage) {
     throw new AdapterError(
       `${site} blocked the automated request (HTTP ${status}). Try again later or from a different network.`,
       site.toLowerCase(),

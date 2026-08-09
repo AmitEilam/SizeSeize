@@ -68,7 +68,7 @@ export async function detectProductAvailability(
   }
 
   if (looksBlocked(page)) {
-    // Site-specific APIs may still work without HTML (e.g. Nike feed).
+    // HTML may be an interstitial, but site APIs / Shopify .js can still work.
     const hostAdapters = siteSpecificAdapters.filter((adapter) =>
       adapter.canHandle(url, page),
     );
@@ -76,6 +76,11 @@ export async function detectProductAvailability(
       const result = await adapter.detect(url, page);
       if (isUsable(result)) return result;
       if (result.status === "blocked") return result;
+    }
+
+    if (shopifyAdapter.canHandle(url, page)) {
+      const shopify = await shopifyAdapter.detect(url, page);
+      if (isUsable(shopify)) return shopify;
     }
 
     return failResult(

@@ -207,11 +207,14 @@ export const nikeAdapter: ProductAdapter = {
 };
 
 function looksBlockedHtml(html: string, status: number) {
+  if (status === 403 || status === 429) return true;
   const lower = html.toLowerCase();
+  const title =
+    lower.match(/<title[^>]*>([\s\S]*?)<\/title>/)?.[1]?.trim() ?? "";
   return (
-    status === 403 ||
-    status === 429 ||
-    lower.includes("access denied") ||
-    lower.includes("captcha")
+    lower.includes("cf-browser-verification") ||
+    lower.includes("cdn-cgi/challenge-platform") ||
+    title.includes("just a moment") ||
+    title.includes("access denied")
   );
 }
