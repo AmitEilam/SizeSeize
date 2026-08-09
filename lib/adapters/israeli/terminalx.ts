@@ -1,4 +1,8 @@
 import {
+  extractMetaContent,
+  extractProductImageFromHtml,
+} from "@/lib/adapters/html";
+import {
   AdapterError,
   DEFAULT_FETCH_HEADERS,
   type ProductAvailability,
@@ -29,7 +33,6 @@ export const terminalXAdapter: ProductAdapter = {
   },
 
   async fetchAvailability(url: string): Promise<ProductAvailability> {
-    // Many Israeli fashion SKUs are Shopify-backed; reuse when possible.
     try {
       if (shopifyAdapter.canHandle(url)) {
         return await shopifyAdapter.fetchAvailability(url);
@@ -53,6 +56,7 @@ export const terminalXAdapter: ProductAdapter = {
 
     const html = await res.text();
     const productName = extractMetaContent(html, "og:title") ?? undefined;
+    const productImageUrl = extractProductImageFromHtml(html) ?? undefined;
     const sizes = extractSizeButtons(html);
 
     if (sizes.length === 0) {
@@ -64,6 +68,7 @@ export const terminalXAdapter: ProductAdapter = {
 
     return {
       productName,
+      productImageUrl,
       availableSizes: sizes.filter((s) => s.available).map((s) => s.label),
       rawSignals: {
         source: "terminalx_html",
@@ -76,22 +81,9 @@ export const terminalXAdapter: ProductAdapter = {
 
 type SizeButton = { label: string; available: boolean };
 
-function extractMetaContent(html: string, property: string): string | null {
-  const re = new RegExp(
-    `<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`,
-    "i",
-  );
-  const reAlt = new RegExp(
-    `<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${property}["']`,
-    "i",
-  );
-  return html.match(re)?.[1] ?? html.match(reAlt)?.[1] ?? null;
-}
-
 function extractSizeButtons(html: string): SizeButton[] {
   const results: SizeButton[] = [];
 
-  // Common patterns: button/span with size text and disabled / sold-out classes
   const buttonRe =
     /<(?:button|div|span|li)[^>]*(?:size|מידה|variant)[^>]*>([\s\S]*?)<\/(?:button|div|span|li)>/gi;
 
@@ -119,7 +111,6 @@ function extractSizeButtons(html: string): SizeButton[] {
     });
   }
 
-  // Deduplicate by label (prefer unavailable if conflict)
   const map = new Map<string, SizeButton>();
   for (const item of results) {
     const existing = map.get(item.label);

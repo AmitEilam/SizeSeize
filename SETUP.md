@@ -4,7 +4,7 @@ Follow these steps in order. Stop after each external-service section, complete 
 
 ---
 
-## Phase 0: Local project (already scaffolded)
+## Phase 0 - Local project (already scaffolded)
 
 ```bash
 cd /Users/amiteilam/Desktop/SizeSeize
@@ -17,7 +17,7 @@ Keep `.env.local` private. Never commit secrets.
 
 ---
 
-## Phase 1: Supabase project
+## Phase 1 - Supabase project
 
 ### 1. Create the project
 
@@ -40,15 +40,17 @@ Keep `.env.local` private. Never commit secrets.
 2. Paste the full contents of [`supabase/migrations/001_init.sql`](supabase/migrations/001_init.sql)
 3. Click **Run**
 4. Confirm tables exist under **Table Editor**: `profiles`, `monitored_products`
+5. Also run [`supabase/migrations/002_product_image.sql`](supabase/migrations/002_product_image.sql) if your project was created before product images were added
 
 ### How to verify
 
 - Tables appear with RLS enabled
 - No SQL errors in the editor history
+- `monitored_products` includes `product_image_url`
 
 ---
 
-## Phase 2: Google OAuth + Supabase Auth
+## Phase 2 - Google OAuth + Supabase Auth
 
 ### 1. Create Google OAuth credentials
 
@@ -111,7 +113,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ---
 
-## Phase 3: Resend email
+## Phase 3 - Resend email
 
 ### 1. Create API key
 
@@ -147,7 +149,7 @@ After deploy (or locally with keys set), trigger a product check that becomes av
 
 ---
 
-## Phase 4: Vercel deploy + daily cron (Hobby)
+## Phase 4 - Vercel deploy + daily cron (Hobby)
 
 ### 1. Push the repo to GitHub
 

@@ -3,6 +3,7 @@ export type MonitoredProduct = {
   user_id: string;
   product_url: string;
   product_name: string | null;
+  product_image_url: string | null;
   desired_size: string;
   last_known_available_sizes: string[];
   desired_size_available: boolean;

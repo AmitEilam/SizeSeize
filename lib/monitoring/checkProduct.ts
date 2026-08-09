@@ -39,6 +39,8 @@ export async function checkProductNow(productId: string) {
       .from("monitored_products")
       .update({
         product_name: availability.productName ?? product.product_name,
+        product_image_url:
+          availability.productImageUrl ?? product.product_image_url,
         last_known_available_sizes: availability.availableSizes,
         desired_size_available: desiredAvailable,
         last_checked_at: now,

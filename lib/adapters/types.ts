@@ -1,5 +1,6 @@
 export type ProductAvailability = {
   productName?: string;
+  productImageUrl?: string;
   availableSizes: string[];
   rawSignals?: Record<string, unknown>;
 };

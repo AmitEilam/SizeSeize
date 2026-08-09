@@ -1,4 +1,8 @@
 import {
+  extractProductImageFromHtml,
+  normalizeImageUrl,
+} from "@/lib/adapters/html";
+import {
   AdapterError,
   DEFAULT_FETCH_HEADERS,
   type ProductAvailability,
@@ -12,10 +16,13 @@ type ShopifyVariant = {
   option2?: string | null;
   option3?: string | null;
   available?: boolean;
+  featured_image?: { src?: string } | null;
 };
 
 type ShopifyProductJson = {
   title?: string;
+  featured_image?: string | null;
+  images?: Array<string | { src?: string }>;
   variants?: ShopifyVariant[];
   options?: Array<{ name?: string; values?: string[] }>;
 };
@@ -30,6 +37,21 @@ function productJsonUrl(productUrl: string): string | null {
   } catch {
     return null;
   }
+}
+
+function extractImage(data: ShopifyProductJson): string | null {
+  const featured = normalizeImageUrl(data.featured_image ?? undefined);
+  if (featured) return featured;
+
+  const first = data.images?.[0];
+  if (typeof first === "string") return normalizeImageUrl(first);
+  if (first && typeof first === "object") {
+    return normalizeImageUrl(first.src);
+  }
+
+  const variantImage = data.variants?.find((v) => v.featured_image?.src)
+    ?.featured_image?.src;
+  return normalizeImageUrl(variantImage);
 }
 
 function extractSizeFromVariant(
@@ -50,7 +72,6 @@ function extractSizeFromVariant(
   if (sizeOptionIndex === 1 && variant.option2) return variant.option2;
   if (sizeOptionIndex === 2 && variant.option3) return variant.option3;
 
-  // Fallback: single-option products or title like "Black / M"
   if (variant.option1 && !variant.option2 && !variant.option3) {
     return variant.option1;
   }
@@ -66,6 +87,20 @@ async function detectShopifyFromHtml(html: string): Promise<boolean> {
     html.includes("window.Shopify") ||
     html.includes('name="shopify-digital-wallet"')
   );
+}
+
+function toAvailability(data: ShopifyProductJson, source: string): ProductAvailability {
+  const availableSizes = (data.variants ?? [])
+    .filter((v) => v.available)
+    .map((v) => extractSizeFromVariant(v, data.options))
+    .filter((s): s is string => Boolean(s));
+
+  return {
+    productName: data.title,
+    productImageUrl: extractImage(data) ?? undefined,
+    availableSizes: [...new Set(availableSizes)],
+    rawSignals: { source, variantCount: data.variants?.length ?? 0 },
+  };
 }
 
 export const shopifyAdapter: ProductAdapter = {
@@ -94,22 +129,28 @@ export const shopifyAdapter: ProductAdapter = {
 
       if (res.ok) {
         const data = (await res.json()) as ShopifyProductJson;
-        const availableSizes = (data.variants ?? [])
-          .filter((v) => v.available)
-          .map((v) => extractSizeFromVariant(v, data.options))
-          .filter((s): s is string => Boolean(s));
-
-        const unique = [...new Set(availableSizes)];
-
-        return {
-          productName: data.title,
-          availableSizes: unique,
-          rawSignals: { source: "shopify_product_js", variantCount: data.variants?.length ?? 0 },
-        };
+        const availability = toAvailability(data, "shopify_product_js");
+        if (!availability.productImageUrl) {
+          // Best-effort og:image if JSON has no featured image
+          try {
+            const pageRes = await fetch(url, {
+              headers: DEFAULT_FETCH_HEADERS,
+              redirect: "follow",
+              next: { revalidate: 0 },
+            });
+            if (pageRes.ok) {
+              const html = await pageRes.text();
+              availability.productImageUrl =
+                extractProductImageFromHtml(html) ?? undefined;
+            }
+          } catch {
+            // ignore
+          }
+        }
+        return availability;
       }
     }
 
-    // Fallback: fetch HTML and confirm Shopify, then retry .js after redirect resolution
     const pageRes = await fetch(url, {
       headers: DEFAULT_FETCH_HEADERS,
       redirect: "follow",
@@ -147,15 +188,11 @@ export const shopifyAdapter: ProductAdapter = {
     }
 
     const data = (await jsonRes.json()) as ShopifyProductJson;
-    const availableSizes = (data.variants ?? [])
-      .filter((v) => v.available)
-      .map((v) => extractSizeFromVariant(v, data.options))
-      .filter((s): s is string => Boolean(s));
-
-    return {
-      productName: data.title,
-      availableSizes: [...new Set(availableSizes)],
-      rawSignals: { source: "shopify_html_then_js" },
-    };
+    const availability = toAvailability(data, "shopify_html_then_js");
+    availability.productImageUrl =
+      availability.productImageUrl ??
+      extractProductImageFromHtml(html) ??
+      undefined;
+    return availability;
   },
 };

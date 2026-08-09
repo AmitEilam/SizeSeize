@@ -1,3 +1,4 @@
+import { extractProductImageFromHtml } from "@/lib/adapters/html";
 import {
   AdapterError,
   DEFAULT_FETCH_HEADERS,
@@ -51,6 +52,7 @@ export const foxAdapter: ProductAdapter = {
 
     return {
       productName: nameMatch?.[1],
+      productImageUrl: extractProductImageFromHtml(html) ?? undefined,
       availableSizes: sizes,
       rawSignals: { source: "fox_html" },
     };

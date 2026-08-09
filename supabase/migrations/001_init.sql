@@ -25,6 +25,7 @@ create table if not exists public.monitored_products (
   user_id uuid not null references auth.users (id) on delete cascade,
   product_url text not null,
   product_name text,
+  product_image_url text,
   desired_size text not null,
   last_known_available_sizes text[] not null default '{}',
   desired_size_available boolean not null default false,
