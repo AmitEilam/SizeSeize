@@ -39,7 +39,7 @@ npm run dev
 ## Project layout
 
 - `app/`: pages, server actions, cron API
-- `lib/adapters/`: expandable site adapters (Shopify + Israeli starters)
+- `lib/adapters/`: expandable site adapters (Shopify, Nike, Adidas, Next, ASOS, Israeli starters)
 - `lib/monitoring/`: shared job + size matching (schedule-agnostic)
 - `lib/email/`: Resend alert + summary templates
 - `supabase/migrations/`: schema + RLS

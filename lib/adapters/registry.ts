@@ -1,3 +1,7 @@
+import { asosAdapter } from "@/lib/adapters/brands/asos";
+import { adidasAdapter } from "@/lib/adapters/brands/adidas";
+import { nextAdapter } from "@/lib/adapters/brands/next";
+import { nikeAdapter } from "@/lib/adapters/brands/nike";
 import { extractProductImageFromHtml } from "@/lib/adapters/html";
 import { castroAdapter } from "@/lib/adapters/israeli/castro";
 import { foxAdapter } from "@/lib/adapters/israeli/fox";
@@ -15,6 +19,10 @@ import {
  * Add new site support by creating an adapter file and appending it here.
  */
 const adapters: ProductAdapter[] = [
+  nikeAdapter,
+  adidasAdapter,
+  nextAdapter,
+  asosAdapter,
   terminalXAdapter,
   foxAdapter,
   castroAdapter,
@@ -35,7 +43,7 @@ export async function fetchProductAvailability(
   const adapter = resolveAdapter(url);
   if (!adapter) {
     throw new AdapterError(
-      "Unsupported site. SizeSeize currently supports Shopify product URLs and selected Israeli fashion sites (Terminal X, Fox, Castro). Add an adapter to expand coverage.",
+      "Unsupported site. Supported: Shopify stores, Nike, Adidas, Next, ASOS, Terminal X, Fox, and Castro. Add an adapter to expand coverage.",
     );
   }
 
