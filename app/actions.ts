@@ -69,22 +69,58 @@ export async function addProduct(
     return { error: "You must be signed in." };
   }
 
-  const { error } = await supabase.from("monitored_products").insert({
-    user_id: user.id,
-    product_url: productUrl,
-    desired_size: desiredSize,
-  });
+  const { data: inserted, error } = await supabase
+    .from("monitored_products")
+    .insert({
+      user_id: user.id,
+      product_url: productUrl,
+      desired_size: desiredSize,
+    })
+    .select("id")
+    .single();
 
-  if (error) {
-    return { error: error.message };
+  if (error || !inserted) {
+    return { error: error?.message ?? "Failed to add product." };
   }
 
-  revalidatePath("/dashboard");
-  return {
-    success: desiredSize
-      ? "Product added."
-      : "Product added. Monitoring overall availability.",
-  };
+  try {
+    const result = await checkProductNow(inserted.id);
+    revalidatePath("/dashboard");
+
+    if (result.detectionStatus === "ok") {
+      return {
+        success: desiredSize
+          ? "Product added and checked."
+          : "Product added and checked. Monitoring overall availability.",
+      };
+    }
+
+    if (result.detectionStatus === "blocked") {
+      return {
+        success:
+          "Product added, but the site blocked the first check. Try Check now later.",
+      };
+    }
+
+    if (result.detectionStatus === "unsupported") {
+      return {
+        success:
+          "Product added, but availability could not be detected yet. Try Check now later.",
+      };
+    }
+
+    return {
+      success:
+        "Product added, but the first check failed. Try Check now later.",
+    };
+  } catch (err) {
+    revalidatePath("/dashboard");
+    return {
+      success: `Product added, but the first check failed${
+        err instanceof Error ? `: ${err.message}` : "."
+      }`,
+    };
+  }
 }
 
 export async function updateProductSize(

@@ -50,7 +50,7 @@ export function AddProductForm() {
         className="ss-btn ss-btn-primary w-full sm:w-auto"
         disabled={pending}
       >
-        {pending ? "Adding…" : "Add Product"}
+        {pending ? "Adding & checking…" : "Add Product"}
       </button>
     </form>
   );
