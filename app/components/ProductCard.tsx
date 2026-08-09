@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   deleteProduct,
   runCheckNow,
@@ -26,7 +27,9 @@ function formatChecked(value: string | null) {
 
 export function ProductCard({ product }: { product: MonitoredProduct }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [updateState, updateAction, updating] = useActionState(
     updateProductSize,
     initial,
@@ -37,6 +40,10 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
   );
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (updateState.success) {
       setEditing(false);
     }
@@ -45,6 +52,25 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
   useEffect(() => {
     setImageFailed(false);
   }, [product.product_image_url]);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setConfirmDelete(false);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [confirmDelete]);
 
   const title = product.product_name || product.product_url;
   const statusClass = product.last_check_error
@@ -64,6 +90,53 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
       : "Unavailable";
 
   const showImage = Boolean(product.product_image_url) && !imageFailed;
+
+  const deleteModal =
+    mounted && confirmDelete
+      ? createPortal(
+          <div
+            className="ss-modal-root"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setConfirmDelete(false);
+              }
+            }}
+          >
+            <div
+              className="ss-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={`delete-title-${product.id}`}
+              aria-describedby={`delete-desc-${product.id}`}
+            >
+              <h2 id={`delete-title-${product.id}`} className="ss-modal-title">
+                Delete product?
+              </h2>
+              <p id={`delete-desc-${product.id}`} className="ss-modal-body">
+                Are you sure you want to delete <strong>{title}</strong>? This
+                cannot be undone.
+              </p>
+              <div className="ss-modal-actions">
+                <button
+                  type="button"
+                  className="ss-btn ss-btn-secondary"
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Cancel
+                </button>
+                <form action={deleteProduct}>
+                  <input type="hidden" name="id" value={product.id} />
+                  <button type="submit" className="ss-btn ss-btn-danger">
+                    Yes, delete
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <article
@@ -190,7 +263,10 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           <button
             type="button"
             className="ss-btn ss-btn-secondary"
-            onClick={() => setEditing(true)}
+            onClick={() => {
+              setEditing(true);
+              setConfirmDelete(false);
+            }}
           >
             Edit
           </button>
@@ -204,17 +280,20 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
               {checking ? "Checking…" : "Check now"}
             </button>
           </form>
-          <form action={deleteProduct}>
-            <input type="hidden" name="id" value={product.id} />
-            <button
-              type="submit"
-              className="ss-btn ss-btn-danger w-full sm:w-auto"
-            >
-              Delete
-            </button>
-          </form>
+          <button
+            type="button"
+            className="ss-btn ss-btn-danger w-full sm:w-auto"
+            onClick={() => {
+              setConfirmDelete(true);
+              setEditing(false);
+            }}
+          >
+            Delete
+          </button>
         </div>
       </div>
+
+      {deleteModal}
     </article>
   );
 }

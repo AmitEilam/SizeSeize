@@ -228,3 +228,53 @@ export async function runCheckNow(
     };
   }
 }
+
+export async function runCheckAll(
+  _prev: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { data: products, error } = await supabase
+    .from("monitored_products")
+    .select("id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!products?.length) {
+    return { error: "No products to check." };
+  }
+
+  let ok = 0;
+  let failed = 0;
+
+  for (const product of products) {
+    try {
+      const result = await checkProductNow(product.id);
+      if (result.detectionStatus === "ok") ok += 1;
+      else failed += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  revalidatePath("/dashboard");
+
+  const total = products.length;
+  return {
+    success: `Checked ${total} product${total === 1 ? "" : "s"}: ${ok} ok${
+      failed > 0 ? `, ${failed} with issues` : ""
+    }.`,
+  };
+}

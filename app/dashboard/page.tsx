@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AddProductForm } from "@/app/components/AddProductForm";
+import { CheckAllButton } from "@/app/components/CheckAllButton";
 import { ProductCard } from "@/app/components/ProductCard";
 import {
   getDisplayName,
@@ -54,6 +55,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-4">
+            <CheckAllButton productCount={list.length} />
             {list.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
