@@ -25,10 +25,8 @@ export function SiteHeader({
         </Link>
 
         <div className="ss-header-actions">
-          <ThemeToggle />
-
           {signedIn ? (
-            <>
+            <div className="ss-user-cluster">
               <div className="ss-user">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -52,30 +50,26 @@ export function SiteHeader({
                   <span className="ss-user-email">{email}</span>
                 </div>
               </div>
+
               {showAuthActions ? (
-                <>
-                  <Link href="/dashboard" className="ss-btn ss-btn-secondary ss-hide-sm">
-                    Dashboard
-                  </Link>
-                  <form action={signOut}>
-                    <button type="submit" className="ss-btn ss-btn-secondary">
-                      Sign out
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <form action={signOut}>
-                  <button type="submit" className="ss-btn ss-btn-secondary">
-                    Sign out
-                  </button>
-                </form>
-              )}
-            </>
+                <Link href="/dashboard" className="ss-btn ss-btn-secondary ss-hide-sm">
+                  Dashboard
+                </Link>
+              ) : null}
+
+              <form action={signOut}>
+                <button type="submit" className="ss-btn ss-btn-secondary">
+                  Sign out
+                </button>
+              </form>
+            </div>
           ) : showAuthActions ? (
             <Link href="/login" className="ss-btn ss-btn-primary">
               Sign in
             </Link>
           ) : null}
+
+          <ThemeToggle />
         </div>
       </div>
     </header>

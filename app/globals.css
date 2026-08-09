@@ -142,12 +142,20 @@ input {
   gap: 0.5rem;
 }
 
+.ss-user-cluster {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
 .ss-user {
   display: flex;
   align-items: center;
   gap: 0.65rem;
   min-width: 0;
   max-width: min(240px, 46vw);
+  padding-inline-end: 0.15rem;
 }
 
 .ss-user-text {
