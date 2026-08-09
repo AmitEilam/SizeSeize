@@ -53,17 +53,17 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
       : "Unavailable";
 
   return (
-    <article className="ss-card flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+    <article className="ss-card flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h3 className="truncate text-lg font-semibold" title={title}>
+          <h3 className="ss-product-title" title={title}>
             {title}
           </h3>
           <a
             href={product.product_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 block truncate text-sm text-[var(--brand-soft)] underline-offset-2 hover:underline"
+            className="ss-product-link"
           >
             {product.product_url}
           </a>
@@ -71,27 +71,25 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
         <span className={`ss-badge ${statusClass} w-fit`}>{statusLabel}</span>
       </div>
 
-      <dl className="grid gap-2 text-sm text-[var(--muted)]">
-        <div className="flex flex-wrap gap-x-2">
-          <dt>Desired size:</dt>
-          <dd className="font-semibold text-[var(--ink)]">
-            {product.desired_size}
-          </dd>
+      <dl className="ss-meta-list">
+        <div className="ss-meta-row">
+          <dt>Desired size</dt>
+          <dd className="font-semibold">{product.desired_size}</dd>
         </div>
-        <div className="flex flex-wrap gap-x-2">
-          <dt>Available sizes:</dt>
-          <dd className="text-[var(--ink)]">
+        <div className="ss-meta-row">
+          <dt>Available sizes</dt>
+          <dd>
             {product.last_known_available_sizes?.length
               ? product.last_known_available_sizes.join(", ")
               : "—"}
           </dd>
         </div>
-        <div className="flex flex-wrap gap-x-2">
-          <dt>Last checked:</dt>
+        <div className="ss-meta-row">
+          <dt>Last checked</dt>
           <dd>{formatChecked(product.last_checked_at)}</dd>
         </div>
         {product.last_check_error ? (
-          <div className="rounded-lg bg-[rgba(155,44,44,0.08)] px-3 py-2 text-[var(--danger)]">
+          <div className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] px-3 py-2 text-[0.95rem] text-[var(--danger)]">
             {product.last_check_error}
           </div>
         ) : null}

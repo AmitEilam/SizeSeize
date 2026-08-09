@@ -9,8 +9,10 @@ export function AddProductForm() {
   const [state, action, pending] = useActionState(addProduct, initial);
 
   return (
-    <form action={action} className="ss-card flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">Add product</h2>
+    <form action={action} className="ss-card flex flex-col gap-4">
+      <h2 className="m-0 text-[1.15rem] font-bold tracking-[-0.01em]">
+        Add product
+      </h2>
       <div className="ss-field">
         <label htmlFor="product_url">Product URL</label>
         <input
@@ -35,10 +37,10 @@ export function AddProductForm() {
         />
       </div>
       {state.error ? (
-        <p className="text-sm text-[var(--danger)]">{state.error}</p>
+        <p className="text-[0.95rem] text-[var(--danger)]">{state.error}</p>
       ) : null}
       {state.success ? (
-        <p className="text-sm text-[var(--ok)]">{state.success}</p>
+        <p className="text-[0.95rem] text-[var(--ok)]">{state.success}</p>
       ) : null}
       <button
         type="submit"
