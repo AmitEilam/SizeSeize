@@ -26,7 +26,7 @@ export async function sendDailySummary(to: string, products: SummaryProduct[]) {
           <div style="color:#555; margin-top: 6px; font-size: 14px; line-height: 1.5;">
             <div>Desired size: <strong>${escapeHtml(p.desiredSize)}</strong></div>
             <div>Status: <strong>${escapeHtml(status)}</strong></div>
-            <div>Available sizes: ${escapeHtml(p.availableSizes.join(", ") || "—")}</div>
+            <div>Available sizes: ${escapeHtml(p.availableSizes.join(", ") || "-")}</div>
             <div><a href="${escapeAttr(p.productUrl)}">${escapeHtml(p.productUrl)}</a></div>
           </div>
         </div>
@@ -37,7 +37,7 @@ export async function sendDailySummary(to: string, products: SummaryProduct[]) {
   const { error } = await resend.emails.send({
     from: getFromAddress(),
     to,
-    subject: `SizeSeize daily summary — ${products.length} product${products.length === 1 ? "" : "s"}`,
+    subject: `SizeSeize daily summary: ${products.length} product${products.length === 1 ? "" : "s"}`,
     html: `
       <div style="font-family: Georgia, 'Times New Roman', serif; max-width: 600px; color: #1a1a1a;">
         <h1 style="font-size: 22px; margin-bottom: 4px;">Daily stock summary</h1>

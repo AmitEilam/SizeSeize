@@ -9,7 +9,7 @@ import {
 } from "@/lib/adapters/types";
 
 /**
- * Ordered adapters — more specific hosts first, then Shopify, then none.
+ * Ordered adapters: more specific hosts first, then Shopify, then none.
  * Add new site support by creating an adapter file and appending it here.
  */
 const adapters: ProductAdapter[] = [

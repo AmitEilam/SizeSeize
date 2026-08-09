@@ -4,10 +4,10 @@ Personal stock-monitoring dashboard. Sign in with Google, track product URLs wit
 
 ## Stack
 
-- **Next.js (React)** — UI + API routes
-- **Supabase** — Google auth, Postgres, RLS
-- **Resend** — alert + summary emails
-- **Vercel** — hosting + daily Hobby cron
+- **Next.js (React)**: UI + API routes
+- **Supabase**: Google auth, Postgres, RLS
+- **Resend**: alert + summary emails
+- **Vercel**: hosting + daily Hobby cron
 
 ## Quick start
 
@@ -36,11 +36,11 @@ npm run dev
 
 ## Project layout
 
-- `app/` — pages, server actions, cron API
-- `lib/adapters/` — expandable site adapters (Shopify + Israeli starters)
-- `lib/monitoring/` — shared job + size matching (schedule-agnostic)
-- `lib/email/` — Resend alert + summary templates
-- `supabase/migrations/` — schema + RLS
+- `app/`: pages, server actions, cron API
+- `lib/adapters/`: expandable site adapters (Shopify + Israeli starters)
+- `lib/monitoring/`: shared job + size matching (schedule-agnostic)
+- `lib/email/`: Resend alert + summary templates
+- `supabase/migrations/`: schema + RLS
 
 ## Adding a new store
 

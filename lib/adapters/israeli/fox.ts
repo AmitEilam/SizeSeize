@@ -8,7 +8,7 @@ import { shopifyAdapter } from "@/lib/adapters/shopify";
 import { UNAVAILABLE_PHRASES } from "@/lib/monitoring/sizeMatch";
 
 /**
- * Fox Israel — prefers Shopify product JSON when present; otherwise HTML heuristics.
+ * Fox Israel: prefers Shopify product JSON when present; otherwise HTML heuristics.
  */
 export const foxAdapter: ProductAdapter = {
   id: "fox",

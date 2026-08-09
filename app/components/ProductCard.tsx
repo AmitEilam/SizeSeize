@@ -81,7 +81,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           <dd>
             {product.last_known_available_sizes?.length
               ? product.last_known_available_sizes.join(", ")
-              : "—"}
+              : "-"}
           </dd>
         </div>
         <div className="ss-meta-row">

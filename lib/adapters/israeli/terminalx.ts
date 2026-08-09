@@ -13,7 +13,7 @@ import {
 const TERMINALX_HOSTS = ["terminalx.com", "www.terminalx.com"];
 
 /**
- * Terminal X — try Shopify-style JSON first; fall back to HTML size buttons.
+ * Terminal X: try Shopify-style JSON first; fall back to HTML size buttons.
  * Expand this adapter as DOM patterns are confirmed against live pages.
  */
 export const terminalXAdapter: ProductAdapter = {

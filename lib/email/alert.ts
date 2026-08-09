@@ -24,7 +24,7 @@ export async function sendAvailabilityAlert(payload: AvailabilityAlertPayload) {
           <tr><td style="padding: 8px 0; color:#666;">Product</td><td style="padding: 8px 0;"><strong>${escapeHtml(name)}</strong></td></tr>
           <tr><td style="padding: 8px 0; color:#666;">Requested size</td><td style="padding: 8px 0;"><strong>${escapeHtml(payload.desiredSize)}</strong></td></tr>
           <tr><td style="padding: 8px 0; color:#666;">Status</td><td style="padding: 8px 0;"><strong>Available</strong></td></tr>
-          <tr><td style="padding: 8px 0; color:#666;">Available sizes</td><td style="padding: 8px 0;">${escapeHtml(payload.availableSizes.join(", ") || "—")}</td></tr>
+          <tr><td style="padding: 8px 0; color:#666;">Available sizes</td><td style="padding: 8px 0;">${escapeHtml(payload.availableSizes.join(", ") || "-")}</td></tr>
         </table>
         <p style="margin-top: 20px;">
           <a href="${escapeAttr(payload.productUrl)}" style="display:inline-block;background:#0f3d2e;color:#fff;padding:12px 18px;text-decoration:none;border-radius:8px;">

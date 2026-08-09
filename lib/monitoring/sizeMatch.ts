@@ -41,7 +41,7 @@ export function isDesiredSizeAvailable(
   return availableSizes.some((size) => sizesMatch(desiredSize, size));
 }
 
-/** EN/HE unavailability phrases — fallback only when structured signals are missing. */
+/** EN/HE unavailability phrases: fallback only when structured signals are missing. */
 export const UNAVAILABLE_PHRASES = [
   "out of stock",
   "sold out",
