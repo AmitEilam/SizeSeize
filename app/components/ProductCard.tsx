@@ -60,7 +60,9 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
   const showImage = Boolean(product.product_image_url) && !imageFailed;
 
   return (
-    <article className="ss-card ss-product-card">
+    <article
+      className={`ss-card ss-product-card${showImage ? " ss-product-card--with-image" : ""}`}
+    >
       {showImage ? (
         <a
           href={product.product_url}
