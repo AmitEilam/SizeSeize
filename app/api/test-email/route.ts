@@ -18,7 +18,7 @@ export async function POST() {
       from: getFromAddress(),
       to: user.email,
       subject: "SizeSeize test email",
-      html: `<p>Hi. SizeSeize email delivery is working for <strong>${user.email}</strong>.</p>`,
+      html: `<p>Hi - SizeSeize email delivery is working for <strong>${user.email}</strong>.</p>`,
     });
 
     if (error) {
