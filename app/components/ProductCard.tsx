@@ -75,7 +75,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
             alt=""
             className="ss-product-image"
             loading="lazy"
-            referrerPolicy="no-referrer"
+            decoding="async"
             onError={() => setImageFailed(true)}
           />
         </a>

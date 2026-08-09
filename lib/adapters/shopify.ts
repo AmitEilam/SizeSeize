@@ -21,7 +21,7 @@ type ShopifyVariant = {
 
 type ShopifyProductJson = {
   title?: string;
-  featured_image?: string | null;
+  featured_image?: string | { src?: string } | null;
   images?: Array<string | { src?: string }>;
   variants?: ShopifyVariant[];
   options?: Array<{ name?: string; values?: string[] }>;
@@ -39,19 +39,29 @@ function productJsonUrl(productUrl: string): string | null {
   }
 }
 
-function extractImage(data: ShopifyProductJson): string | null {
-  const featured = normalizeImageUrl(data.featured_image ?? undefined);
-  if (featured) return featured;
+function extractImage(data: ShopifyProductJson, pageUrl?: string): string | null {
+  const featured = data.featured_image;
+  if (typeof featured === "string") {
+    const fromFeatured = normalizeImageUrl(featured, pageUrl);
+    if (fromFeatured) return fromFeatured;
+  } else if (featured && typeof featured === "object") {
+    const fromFeaturedObj = normalizeImageUrl(featured.src, pageUrl);
+    if (fromFeaturedObj) return fromFeaturedObj;
+  }
 
   const first = data.images?.[0];
-  if (typeof first === "string") return normalizeImageUrl(first);
+  if (typeof first === "string") {
+    const fromFirst = normalizeImageUrl(first, pageUrl);
+    if (fromFirst) return fromFirst;
+  }
   if (first && typeof first === "object") {
-    return normalizeImageUrl(first.src);
+    const fromFirstObj = normalizeImageUrl(first.src, pageUrl);
+    if (fromFirstObj) return fromFirstObj;
   }
 
   const variantImage = data.variants?.find((v) => v.featured_image?.src)
     ?.featured_image?.src;
-  return normalizeImageUrl(variantImage);
+  return normalizeImageUrl(variantImage, pageUrl);
 }
 
 function extractSizeFromVariant(
@@ -89,7 +99,11 @@ async function detectShopifyFromHtml(html: string): Promise<boolean> {
   );
 }
 
-function toAvailability(data: ShopifyProductJson, source: string): ProductAvailability {
+function toAvailability(
+  data: ShopifyProductJson,
+  source: string,
+  pageUrl?: string,
+): ProductAvailability {
   const availableSizes = (data.variants ?? [])
     .filter((v) => v.available)
     .map((v) => extractSizeFromVariant(v, data.options))
@@ -97,7 +111,7 @@ function toAvailability(data: ShopifyProductJson, source: string): ProductAvaila
 
   return {
     productName: data.title,
-    productImageUrl: extractImage(data) ?? undefined,
+    productImageUrl: extractImage(data, pageUrl) ?? undefined,
     availableSizes: [...new Set(availableSizes)],
     rawSignals: { source, variantCount: data.variants?.length ?? 0 },
   };
@@ -129,9 +143,8 @@ export const shopifyAdapter: ProductAdapter = {
 
       if (res.ok) {
         const data = (await res.json()) as ShopifyProductJson;
-        const availability = toAvailability(data, "shopify_product_js");
+        const availability = toAvailability(data, "shopify_product_js", url);
         if (!availability.productImageUrl) {
-          // Best-effort og:image if JSON has no featured image
           try {
             const pageRes = await fetch(url, {
               headers: DEFAULT_FETCH_HEADERS,
@@ -141,7 +154,8 @@ export const shopifyAdapter: ProductAdapter = {
             if (pageRes.ok) {
               const html = await pageRes.text();
               availability.productImageUrl =
-                extractProductImageFromHtml(html) ?? undefined;
+                extractProductImageFromHtml(html, pageRes.url || url) ??
+                undefined;
             }
           } catch {
             // ignore
@@ -188,10 +202,11 @@ export const shopifyAdapter: ProductAdapter = {
     }
 
     const data = (await jsonRes.json()) as ShopifyProductJson;
-    const availability = toAvailability(data, "shopify_html_then_js");
+    const pageUrl = pageRes.url || url;
+    const availability = toAvailability(data, "shopify_html_then_js", pageUrl);
     availability.productImageUrl =
       availability.productImageUrl ??
-      extractProductImageFromHtml(html) ??
+      extractProductImageFromHtml(html, pageUrl) ??
       undefined;
     return availability;
   },

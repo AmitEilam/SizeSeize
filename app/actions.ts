@@ -147,9 +147,13 @@ export async function runCheckNow(
   if (!id) return { error: "Missing product id." };
 
   try {
-    await checkProductNow(id);
+    const result = await checkProductNow(id);
     revalidatePath("/dashboard");
-    return { success: "Checked just now." };
+    return {
+      success: result.imageFound
+        ? "Checked just now. Product image saved."
+        : "Checked just now. No product image found on the page.",
+    };
   } catch (err) {
     revalidatePath("/dashboard");
     return {

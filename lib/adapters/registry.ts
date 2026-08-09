@@ -1,9 +1,11 @@
+import { extractProductImageFromHtml } from "@/lib/adapters/html";
 import { castroAdapter } from "@/lib/adapters/israeli/castro";
 import { foxAdapter } from "@/lib/adapters/israeli/fox";
 import { terminalXAdapter } from "@/lib/adapters/israeli/terminalx";
 import { shopifyAdapter } from "@/lib/adapters/shopify";
 import {
   AdapterError,
+  DEFAULT_FETCH_HEADERS,
   type ProductAdapter,
   type ProductAvailability,
 } from "@/lib/adapters/types";
@@ -38,5 +40,23 @@ export async function fetchProductAvailability(
   }
 
   const result = await adapter.fetchAvailability(url);
+
+  if (!result.productImageUrl) {
+    try {
+      const pageRes = await fetch(url, {
+        headers: DEFAULT_FETCH_HEADERS,
+        redirect: "follow",
+        next: { revalidate: 0 },
+      });
+      if (pageRes.ok) {
+        const html = await pageRes.text();
+        result.productImageUrl =
+          extractProductImageFromHtml(html, pageRes.url || url) ?? undefined;
+      }
+    } catch {
+      // Image is optional; keep size data even if image lookup fails.
+    }
+  }
+
   return { ...result, adapterId: adapter.id };
 }

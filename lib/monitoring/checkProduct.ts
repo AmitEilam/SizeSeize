@@ -34,13 +34,14 @@ export async function checkProductNow(productId: string) {
       availability.availableSizes,
     );
     const now = new Date().toISOString();
+    const nextImage =
+      availability.productImageUrl ?? product.product_image_url ?? null;
 
     const { data: updated, error: updateError } = await supabase
       .from("monitored_products")
       .update({
         product_name: availability.productName ?? product.product_name,
-        product_image_url:
-          availability.productImageUrl ?? product.product_image_url,
+        product_image_url: nextImage,
         last_known_available_sizes: availability.availableSizes,
         desired_size_available: desiredAvailable,
         last_checked_at: now,
@@ -55,7 +56,10 @@ export async function checkProductNow(productId: string) {
       throw new Error(updateError.message);
     }
 
-    return updated;
+    return {
+      product: updated,
+      imageFound: Boolean(availability.productImageUrl),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Check failed";
     const now = new Date().toISOString();

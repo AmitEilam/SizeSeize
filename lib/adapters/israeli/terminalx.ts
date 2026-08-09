@@ -56,7 +56,8 @@ export const terminalXAdapter: ProductAdapter = {
 
     const html = await res.text();
     const productName = extractMetaContent(html, "og:title") ?? undefined;
-    const productImageUrl = extractProductImageFromHtml(html) ?? undefined;
+    const productImageUrl =
+      extractProductImageFromHtml(html, res.url || url) ?? undefined;
     const sizes = extractSizeButtons(html);
 
     if (sizes.length === 0) {

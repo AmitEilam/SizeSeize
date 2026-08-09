@@ -52,7 +52,8 @@ export const foxAdapter: ProductAdapter = {
 
     return {
       productName: nameMatch?.[1],
-      productImageUrl: extractProductImageFromHtml(html) ?? undefined,
+      productImageUrl:
+        extractProductImageFromHtml(html, res.url || url) ?? undefined,
       availableSizes: sizes,
       rawSignals: { source: "fox_html" },
     };
