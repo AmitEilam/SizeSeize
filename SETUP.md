@@ -191,6 +191,10 @@ Users can set a preferred local check time and email toggles on the dashboard (`
 
 Keep `vercel.json` aligned with `PLATFORM_CRON_UTC_HOUR` in `lib/monitoring/schedule.ts` (currently 9). On a plan that allows hourly crons, set `CRON_STRICT_HOUR=true` so the job waits until each user's preferred local time.
 
+### Browser fallback
+
+When cheaper detectors fail, SizeSeize renders the product page in headless Chromium (`puppeteer-core` + `@sparticuz/chromium`) and reads the live size UI. This is free but slower, and may approach Hobby time limits if many products need it in one cron run. Disable with `BROWSER_FALLBACK=0`.
+
 Vercel automatically sends:
 
 ```http

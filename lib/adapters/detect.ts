@@ -2,6 +2,7 @@ import { asosAdapter } from "@/lib/adapters/brands/asos";
 import { adidasAdapter } from "@/lib/adapters/brands/adidas";
 import { nextAdapter } from "@/lib/adapters/brands/next";
 import { nikeAdapter } from "@/lib/adapters/brands/nike";
+import { browserAdapter } from "@/lib/adapters/layers/browser";
 import { genericDomAdapter } from "@/lib/adapters/layers/dom";
 import { shopifyAdapter } from "@/lib/adapters/layers/shopify";
 import { structuredDataAdapter } from "@/lib/adapters/layers/structured";
@@ -13,8 +14,8 @@ import {
 } from "@/lib/adapters/types";
 
 /**
- * Site-specific adapters for custom storefronts.
- * Tried first when the host matches.
+ * Site-specific adapters for custom storefronts (Nike, Adidas, …).
+ * Tried after generic HTTP layers so broad detectors run first.
  */
 const siteSpecificAdapters: ProductAdapter[] = [
   nikeAdapter,
@@ -24,12 +25,12 @@ const siteSpecificAdapters: ProductAdapter[] = [
 ];
 
 /**
- * Generic layered detectors (in order):
+ * HTTP / static layered detectors (in order):
  * 1. Shopify machine-readable product JSON
  * 2. Structured data (JSON-LD / embedded JSON / __NEXT_DATA__)
- * 3. Generic DOM (only when confidence is clear)
+ * 3. Generic DOM on the initial HTML response
  */
-const layerAdapters: ProductAdapter[] = [
+const httpLayerAdapters: ProductAdapter[] = [
   shopifyAdapter,
   structuredDataAdapter,
   genericDomAdapter,
@@ -37,8 +38,9 @@ const layerAdapters: ProductAdapter[] = [
 
 export function listAdapters(): string[] {
   return [
+    ...httpLayerAdapters.map((a) => a.id),
     ...siteSpecificAdapters.map((a) => a.id),
-    ...layerAdapters.map((a) => a.id),
+    browserAdapter.id,
   ];
 }
 
@@ -49,9 +51,29 @@ function isUsable(result: ProductDetectionResult): boolean {
   );
 }
 
+async function tryAdapters(
+  adapters: ProductAdapter[],
+  url: string,
+  page?: Awaited<ReturnType<typeof loadPageContext>>,
+): Promise<ProductDetectionResult | null> {
+  for (const adapter of adapters) {
+    if (!adapter.canHandle(url, page)) continue;
+    const result = await adapter.detect(url, page);
+    if (isUsable(result)) return result;
+    if (result.status === "blocked") return result;
+  }
+  return null;
+}
+
 /**
  * Layered product detection entrypoint.
- * Monitoring code should call this and ignore website-specific details.
+ *
+ * Order:
+ * 1. Shopify / API
+ * 2. Structured data
+ * 3. Generic HTML/DOM
+ * 4. Site-specific adapters
+ * 5. Headless browser (final fallback)
  */
 export async function detectProductAvailability(
   url: string,
@@ -60,28 +82,34 @@ export async function detectProductAvailability(
   try {
     page = await loadPageContext(url);
   } catch (err) {
-    return failResult(
-      "pipeline",
-      "error",
-      err instanceof Error ? err.message : "Failed to fetch product page.",
-    );
+    // Still allow the browser fallback when the initial HTTP fetch fails.
+    page = undefined;
+    const httpError =
+      err instanceof Error ? err.message : "Failed to fetch product page.";
+
+    const browserOnly = await tryAdapters([browserAdapter], url, undefined);
+    if (browserOnly && isUsable(browserOnly)) return browserOnly;
+
+    return failResult("pipeline", "error", httpError);
   }
 
   if (looksBlocked(page)) {
-    // HTML may be an interstitial, but site APIs / Shopify .js can still work.
+    // Cheap layers may still work (Shopify .js / site APIs) without HTML.
     const hostAdapters = siteSpecificAdapters.filter((adapter) =>
       adapter.canHandle(url, page),
     );
-    for (const adapter of hostAdapters) {
-      const result = await adapter.detect(url, page);
-      if (isUsable(result)) return result;
-      if (result.status === "blocked") return result;
-    }
+    const early =
+      (await tryAdapters(hostAdapters, url, page)) ||
+      (shopifyAdapter.canHandle(url, page)
+        ? await shopifyAdapter.detect(url, page)
+        : null);
 
-    if (shopifyAdapter.canHandle(url, page)) {
-      const shopify = await shopifyAdapter.detect(url, page);
-      if (isUsable(shopify)) return shopify;
-    }
+    if (early && isUsable(early)) return early;
+    if (early?.status === "blocked") return early;
+
+    const browser = await tryAdapters([browserAdapter], url, page);
+    if (browser && isUsable(browser)) return browser;
+    if (browser?.status === "blocked") return browser;
 
     return failResult(
       "pipeline",
@@ -91,26 +119,31 @@ export async function detectProductAvailability(
     );
   }
 
-  // 1) Site-specific dedicated adapters
-  for (const adapter of siteSpecificAdapters) {
-    if (!adapter.canHandle(url, page)) continue;
-    const result = await adapter.detect(url, page);
-    if (isUsable(result)) return result;
-    if (result.status === "blocked") return result;
-    // If site-specific ran but couldn't detect, continue to generic layers.
+  // 1-3) Shopify → structured → DOM
+  const httpHit = await tryAdapters(httpLayerAdapters, url, page);
+  if (httpHit) {
+    if (isUsable(httpHit)) return httpHit;
+    if (httpHit.status === "blocked") return httpHit;
   }
 
-  // 2-4) Shopify → structured → DOM
-  for (const adapter of layerAdapters) {
-    if (!adapter.canHandle(url, page)) continue;
-    const result = await adapter.detect(url, page);
-    if (isUsable(result)) return result;
+  // 4) Site-specific dedicated adapters
+  const siteHit = await tryAdapters(siteSpecificAdapters, url, page);
+  if (siteHit) {
+    if (isUsable(siteHit)) return siteHit;
+    if (siteHit.status === "blocked") return siteHit;
+  }
+
+  // 5) Headless browser — last resort after all cheaper methods fail
+  const browserHit = await tryAdapters([browserAdapter], url, page);
+  if (browserHit) {
+    if (isUsable(browserHit)) return browserHit;
+    if (browserHit.status === "blocked") return browserHit;
   }
 
   return failResult(
     "pipeline",
     "unsupported",
-    "Unable to confidently detect available sizes for this product page.",
+    "Unable to confidently detect availability for this product page.",
     {
       tried: listAdapters(),
     },

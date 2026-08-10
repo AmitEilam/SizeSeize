@@ -40,12 +40,15 @@ Monitoring calls `detectProductAvailability(url)` only. Website details stay ins
 
 Detection order:
 
-1. **Site-specific** adapters (Nike, Adidas, Next, ASOS) when the host matches
-2. **Shopify** layer (product `.js` / variant availability JSON)
-3. **Structured data** layer (JSON-LD, embedded variant JSON, `__NEXT_DATA__`)
-4. **Generic DOM** layer only when size controls and availability states are clear
+1. **Shopify** layer (product `.js` / variant availability JSON)
+2. **Structured data** layer (JSON-LD, embedded variant JSON, `__NEXT_DATA__`)
+3. **Generic DOM** layer on the initial HTML response (only when confidence is clear)
+4. **Site-specific** adapters (Nike, Adidas, Next, ASOS) when the host matches
+5. **Headless browser** fallback (`puppeteer-core` + `@sparticuz/chromium`) — renders the page, runs JavaScript, then inspects the live DOM
 
-If confidence is low, SizeSeize does **not** guess. The product is marked unsupported/unable to detect.
+Cheaper HTTP layers always run first. The browser fallback is used only when they fail. If confidence is still low after the browser pass, SizeSeize does **not** guess.
+
+Set `BROWSER_FALLBACK=0` to disable the browser layer (useful for debugging).
 
 ## Project layout
 
