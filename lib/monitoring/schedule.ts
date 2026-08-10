@@ -104,7 +104,7 @@ export function resolveEffectiveSchedule(
 
 /**
  * Build profile updates when the user picks a new preferred local time.
- * If today's scheduled check already ran, queue the change for tomorrow.
+ * If today's scheduled check is already done, queue the change for tomorrow.
  */
 export function buildScheduleUpdate(input: {
   profile: ScheduleProfile;
@@ -119,9 +119,9 @@ export function buildScheduleUpdate(input: {
   const now = input.now ?? new Date();
   const tz = input.profile.timezone || DEFAULT_TIMEZONE;
   const today = localDateString(now, tz);
-  const alreadyRanToday = input.profile.last_scheduled_run_on === today;
+  const clock = formatClock(input.nextHour, input.nextMinute);
 
-  if (alreadyRanToday) {
+  if (hasCompletedTodaysScheduledCheck(input.profile, now)) {
     const tomorrow = shiftLocalDate(today, 1);
 
     return {
@@ -131,7 +131,7 @@ export function buildScheduleUpdate(input: {
         pending_check_minute: input.nextMinute,
         pending_schedule_effective_on: tomorrow,
       },
-      message: `Saved. Today's scheduled check already ran, so ${formatClock(input.nextHour, input.nextMinute)} will apply starting tomorrow.`,
+      message: `Saved. Today's scheduled check already ran, so ${clock} will apply starting tomorrow. Next scheduled check: tomorrow at ${clock}.`,
     };
   }
 
@@ -144,7 +144,7 @@ export function buildScheduleUpdate(input: {
       pending_check_minute: null,
       pending_schedule_effective_on: null,
     },
-    message: `Saved. Next scheduled check will use ${formatClock(input.nextHour, input.nextMinute)}.`,
+    message: `Saved. Next scheduled check: today at ${clock}.`,
   };
 }
 
@@ -153,6 +153,31 @@ export function shiftLocalDate(isoDate: string, days: number): string {
   const [y, m, d] = isoDate.split("-").map(Number);
   const utc = new Date(Date.UTC(y, m - 1, d + days));
   return utc.toISOString().slice(0, 10);
+}
+
+/**
+ * Today's daily check is considered done when:
+ * - the scheduled job recorded last_scheduled_run_on for today, or
+ * - the current preferred time has already passed (daily slot consumed).
+ */
+export function hasCompletedTodaysScheduledCheck(
+  profile: ScheduleProfile,
+  now = new Date(),
+): boolean {
+  const tz = profile.timezone || DEFAULT_TIMEZONE;
+  const today = localDateString(now, tz);
+
+  if (profile.last_scheduled_run_on === today) {
+    return true;
+  }
+
+  const local = localTimeParts(now, tz);
+  const nowMinutes = local.hour * 60 + local.minute;
+  const preferredMinutes =
+    (profile.preferred_check_hour ?? DEFAULT_CHECK_HOUR) * 60 +
+    (profile.preferred_check_minute ?? DEFAULT_CHECK_MINUTE);
+
+  return nowMinutes >= preferredMinutes;
 }
 
 /**
@@ -206,29 +231,51 @@ export function promotePendingScheduleIfDue(
   };
 }
 
-export function describeNextScheduledRun(profile: ScheduleProfile, now = new Date()) {
+/**
+ * Actual next scheduled run for UI copy.
+ * Always the next possible daily check, never a time that already passed today.
+ */
+export function describeNextScheduledRun(
+  profile: ScheduleProfile,
+  now = new Date(),
+) {
   const tz = profile.timezone || DEFAULT_TIMEZONE;
   const today = localDateString(now, tz);
   const schedule = resolveEffectiveSchedule(profile, today);
-  const alreadyRan = profile.last_scheduled_run_on === today;
-  const clock = formatClock(schedule.hour, schedule.minute);
+  const completedToday = hasCompletedTodaysScheduledCheck(profile, now);
 
-  if (alreadyRan) {
-    const pendingClock =
-      schedule.hasPendingChange && typeof schedule.pendingHour === "number"
-        ? formatClock(schedule.pendingHour, schedule.pendingMinute ?? 0)
-        : null;
+  const nextHour =
+    schedule.hasPendingChange && typeof schedule.pendingHour === "number"
+      ? schedule.pendingHour
+      : schedule.hour;
+  const nextMinute =
+    schedule.hasPendingChange && typeof schedule.pendingMinute === "number"
+      ? schedule.pendingMinute
+      : schedule.minute;
+  const clock = formatClock(nextHour, nextMinute);
+
+  // Pending schedule changes always start tomorrow.
+  if (schedule.hasPendingChange && typeof schedule.pendingHour === "number") {
+    return {
+      alreadyRanToday: completedToday,
+      when: "tomorrow" as const,
+      label: `Next scheduled check: tomorrow at ${clock}.`,
+      effectiveClock: clock,
+    };
+  }
+
+  if (completedToday) {
     return {
       alreadyRanToday: true,
-      label: pendingClock
-        ? `Today's check already ran. New time ${pendingClock} starts tomorrow.`
-        : `Today's check already ran. Next scheduled check is tomorrow at ${clock}.`,
-      effectiveClock: pendingClock ?? clock,
+      when: "tomorrow" as const,
+      label: `Next scheduled check: tomorrow at ${clock}.`,
+      effectiveClock: clock,
     };
   }
 
   return {
     alreadyRanToday: false,
+    when: "today" as const,
     label: `Next scheduled check: today at ${clock}.`,
     effectiveClock: clock,
   };

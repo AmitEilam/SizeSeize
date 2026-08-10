@@ -12,7 +12,6 @@ import {
   DEFAULT_TIMEZONE,
   detectBrowserTimezone,
   describeNextScheduledRun,
-  formatClock,
   localDateString,
   resolveEffectiveSchedule,
 } from "@/lib/monitoring/schedule";
@@ -153,21 +152,9 @@ export function NotificationSettings({ profile }: Props) {
       </div>
 
       <div className="rounded-lg bg-[var(--surface-soft)] px-3 py-3 text-[0.92rem] leading-relaxed text-[var(--muted)]">
-        <p className="m-0">{nextRun.label}</p>
-        {effective.hasPendingChange &&
-        typeof effective.pendingHour === "number" ? (
-          <p className="mt-2 mb-0">
-            Pending change:{" "}
-            <strong className="text-[var(--ink)]">
-              {formatClock(
-                effective.pendingHour,
-                effective.pendingMinute ?? 0,
-              )}
-            </strong>{" "}
-            takes effect tomorrow. Until then, today&apos;s completed check
-            stands.
-          </p>
-        ) : null}
+        <p className="m-0">
+          <strong className="text-[var(--ink)]">{nextRun.label}</strong>
+        </p>
         <p className="mt-2 mb-0">
           Checks run once per day. If you change the time after today&apos;s
           check has already run, the new schedule applies from tomorrow.
