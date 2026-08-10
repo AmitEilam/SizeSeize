@@ -6,7 +6,18 @@ create extension if not exists "pgcrypto";
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  notify_availability_alerts boolean not null default true,
+  notify_daily_summary boolean not null default true,
+  timezone text not null default 'Asia/Jerusalem',
+  preferred_check_hour smallint not null default 12
+    check (preferred_check_hour >= 0 and preferred_check_hour <= 23),
+  preferred_check_minute smallint not null default 0
+    check (preferred_check_minute >= 0 and preferred_check_minute <= 59),
+  pending_check_hour smallint,
+  pending_check_minute smallint,
+  pending_schedule_effective_on date,
+  last_scheduled_run_on date
 );
 
 alter table public.profiles enable row level security;

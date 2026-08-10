@@ -1,6 +1,6 @@
 # SizeSeize
 
-Personal stock-monitoring dashboard. Sign in with Google, track product URLs with an optional desired size, get email alerts when that size (or the product overall) becomes available, and receive a daily stock summary.
+Personal stock-monitoring dashboard. Sign in with Google, track product URLs with an optional desired size, get email alerts when that size (or the product overall) becomes available, and receive a daily stock summary. Dashboard settings control preferred daily check time and which email types to send.
 
 ## Stack
 

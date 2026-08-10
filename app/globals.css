@@ -353,6 +353,36 @@ input {
   outline-offset: 1px;
 }
 
+.ss-select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  padding: 0.7rem 0.8rem;
+}
+
+.ss-select:focus {
+  outline: 2px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.ss-check-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.ss-check-row input[type="checkbox"] {
+  margin-top: 0.2rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--brand-soft);
+  flex-shrink: 0;
+}
+
 .ss-card {
   background: var(--surface);
   border: 1px solid var(--line);

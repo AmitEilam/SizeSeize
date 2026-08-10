@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AddProductForm } from "@/app/components/AddProductForm";
 import { CheckAllButton } from "@/app/components/CheckAllButton";
+import { NotificationSettings } from "@/app/components/NotificationSettings";
 import { ProductCard } from "@/app/components/ProductCard";
 import {
   getDisplayName,
@@ -8,7 +9,7 @@ import {
   SiteHeader,
 } from "@/app/components/SiteHeader";
 import { createClient } from "@/lib/supabase/server";
-import type { MonitoredProduct } from "@/lib/types";
+import type { MonitoredProduct, Profile } from "@/lib/types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -20,11 +21,14 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const { data: products } = await supabase
-    .from("monitored_products")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: products }, { data: profile }] = await Promise.all([
+    supabase
+      .from("monitored_products")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+  ]);
 
   const list = (products ?? []) as MonitoredProduct[];
 
@@ -48,6 +52,8 @@ export default async function DashboardPage() {
         </div>
 
         <AddProductForm />
+
+        <NotificationSettings profile={(profile as Profile | null) ?? null} />
 
         {list.length === 0 ? (
           <div className="ss-card text-[1.05rem] leading-relaxed text-[var(--muted)]">

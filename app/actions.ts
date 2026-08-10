@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkProductNow } from "@/lib/monitoring/checkProduct";
+import { buildScheduleUpdate, isValidTimezone, DEFAULT_TIMEZONE } from "@/lib/monitoring/schedule";
 import { cleanSizeLabel } from "@/lib/sizes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -277,4 +278,110 @@ export async function runCheckAll(
       failed > 0 ? `, ${failed} with issues` : ""
     }.`,
   };
+}
+
+export async function updateNotificationSettings(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const notifyAlerts = formData.get("notify_availability_alerts") === "on";
+  const notifySummary = formData.get("notify_daily_summary") === "on";
+  const timezoneRaw = String(formData.get("timezone") ?? "").trim();
+  const hourRaw = Number(formData.get("preferred_check_hour"));
+  const minuteRaw = Number(formData.get("preferred_check_minute"));
+
+  if (!Number.isInteger(hourRaw) || hourRaw < 0 || hourRaw > 23) {
+    return { error: "Choose a valid hour (0-23)." };
+  }
+  if (![0, 15, 30, 45].includes(minuteRaw)) {
+    return { error: "Choose a valid minute (00, 15, 30, or 45)." };
+  }
+
+  const timezone =
+    timezoneRaw && isValidTimezone(timezoneRaw)
+      ? timezoneRaw
+      : DEFAULT_TIMEZONE;
+
+  const { data: existing, error: loadError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (loadError) {
+    return { error: loadError.message };
+  }
+
+  if (!existing) {
+    const { error: insertError } = await supabase.from("profiles").insert({
+      id: user.id,
+      email: user.email ?? "",
+      notify_availability_alerts: notifyAlerts,
+      notify_daily_summary: notifySummary,
+      timezone,
+      preferred_check_hour: hourRaw,
+      preferred_check_minute: minuteRaw,
+    });
+    if (insertError) {
+      return { error: insertError.message };
+    }
+    revalidatePath("/dashboard");
+    return { success: "Notification settings saved." };
+  }
+
+  const currentHour =
+    existing.pending_check_hour ?? existing.preferred_check_hour ?? 12;
+  const currentMinute =
+    existing.pending_check_minute ?? existing.preferred_check_minute ?? 0;
+  const scheduleUnchanged =
+    currentHour === hourRaw && currentMinute === minuteRaw;
+
+  const schedule = scheduleUnchanged
+    ? null
+    : buildScheduleUpdate({
+        profile: {
+          timezone: existing.timezone || timezone,
+          preferred_check_hour: existing.preferred_check_hour ?? 12,
+          preferred_check_minute: existing.preferred_check_minute ?? 0,
+          pending_check_hour: existing.pending_check_hour ?? null,
+          pending_check_minute: existing.pending_check_minute ?? null,
+          pending_schedule_effective_on:
+            existing.pending_schedule_effective_on ?? null,
+          last_scheduled_run_on: existing.last_scheduled_run_on ?? null,
+        },
+        nextHour: hourRaw,
+        nextMinute: minuteRaw,
+      });
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      email: user.email ?? existing.email,
+      notify_availability_alerts: notifyAlerts,
+      notify_daily_summary: notifySummary,
+      timezone,
+      ...(schedule?.updates ?? {}),
+    })
+    .eq("id", user.id);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath("/dashboard");
+
+  if (!schedule) {
+    return { success: "Notification settings saved." };
+  }
+
+  return { success: schedule.message };
 }

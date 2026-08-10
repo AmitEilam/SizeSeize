@@ -18,4 +18,13 @@ export type Profile = {
   id: string;
   email: string;
   created_at: string;
+  notify_availability_alerts: boolean;
+  notify_daily_summary: boolean;
+  timezone: string;
+  preferred_check_hour: number;
+  preferred_check_minute: number;
+  pending_check_hour: number | null;
+  pending_check_minute: number | null;
+  pending_schedule_effective_on: string | null;
+  last_scheduled_run_on: string | null;
 };
