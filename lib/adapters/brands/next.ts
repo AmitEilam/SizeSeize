@@ -99,7 +99,13 @@ export const nextAdapter: ProductAdapter = {
         }));
 
     if (pageData.status === 403 || pageData.status === 429) {
-      return failResult("next", "blocked", "Next blocked the product page.");
+      // Method failed — pipeline continues to other layers / browser.
+      return failResult(
+        "next",
+        "unsupported",
+        `Next product page unavailable (HTTP ${pageData.status}).`,
+        { httpStatus: pageData.status, source: "next_html" },
+      );
     }
     if (pageData.status >= 400) {
       return failResult(

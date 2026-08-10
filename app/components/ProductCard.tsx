@@ -251,8 +251,8 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
         {updateState.error ? (
           <p className="text-sm text-[var(--danger)]">{updateState.error}</p>
         ) : null}
-        {checkState.error &&
-        checkState.error !== product.last_check_error ? (
+        {/* Prefer the persisted check error on the card; avoid a second duplicate line. */}
+        {!product.last_check_error && checkState.error ? (
           <p className="text-sm text-[var(--danger)]">{checkState.error}</p>
         ) : null}
         {checkState.success ? (

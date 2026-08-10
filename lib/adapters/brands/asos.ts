@@ -65,7 +65,12 @@ export const asosAdapter: ProductAdapter = {
     });
 
     if (stock.status === 403 || stock.status === 429) {
-      return failResult("asos", "blocked", "ASOS blocked the stock API.");
+      return failResult(
+        "asos",
+        "unsupported",
+        `ASOS stock API unavailable (HTTP ${stock.status}).`,
+        { httpStatus: stock.status, source: "asos_stockprice" },
+      );
     }
 
     if (!stock.ok || !Array.isArray(stock.data) || !stock.data[0]?.variants) {

@@ -143,11 +143,12 @@ export const adidasAdapter: ProductAdapter = {
     }
 
     if (availability.status === 403 || availability.status === 429) {
+      // Method failed — pipeline continues to other layers / browser.
       return failResult(
         "adidas",
-        "blocked",
-        "Adidas blocked the availability API request.",
-        { status: availability.status },
+        "unsupported",
+        `Adidas availability API unavailable (HTTP ${availability.status}).`,
+        { httpStatus: availability.status, source: "adidas_api" },
       );
     }
 
@@ -161,7 +162,12 @@ export const adidasAdapter: ProductAdapter = {
         }));
 
     if (pageData.status === 403 || pageData.status === 429) {
-      return failResult("adidas", "blocked", "Adidas blocked the product page.");
+      return failResult(
+        "adidas",
+        "unsupported",
+        `Adidas product page unavailable (HTTP ${pageData.status}).`,
+        { httpStatus: pageData.status, source: "adidas_html" },
+      );
     }
 
     const embed = pageData.html.match(

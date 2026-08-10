@@ -244,11 +244,12 @@ export async function detectProductAvailability(
   }
 
   const browserBlocked = browserHit?.status === "blocked";
-  const earlyBlocked = attempts.some((a) => a.status === "blocked");
   const finalStatus =
-    blockInfo.blocked || browserBlocked || earlyBlocked
-      ? "blocked"
-      : "unsupported";
+    blockInfo.blocked || browserBlocked ? "blocked" : "unsupported";
+
+  const failedAdapters = attempts
+    .filter((a) => a.status !== "ok")
+    .map((a) => a.adapterId);
 
   const message =
     finalStatus === "blocked"
@@ -260,8 +261,8 @@ export async function detectProductAvailability(
                   : ""
               })`
             : ""
-        }. Headless browser fallback also failed.`
-      : "Unable to confidently detect availability for this product page.";
+        }. Tried: ${failedAdapters.join(" → ") || "browser"}.`
+      : `Unable to confidently detect availability for this product page. Tried: ${failedAdapters.join(" → ") || listAdapters().join(" → ")}.`;
 
   logDetect("pipeline_failed", {
     finalStatus,

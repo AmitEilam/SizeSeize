@@ -203,17 +203,20 @@ export async function runCheckNow(
     if (result.detectionStatus === "unsupported") {
       return {
         error:
-          "Unable to confidently detect availability for this product page. No guess was made.",
+          result.product?.last_check_error ||
+          "Unable to confidently detect availability for this product page.",
       };
     }
     if (result.detectionStatus === "blocked") {
       return {
-        error: "The product site blocked automated access.",
+        error:
+          result.product?.last_check_error ||
+          "The product site blocked automated access.",
       };
     }
     if (result.detectionStatus !== "ok") {
       return {
-        error: "Detection failed for this product page.",
+        error: result.product?.last_check_error || "Detection failed for this product page.",
       };
     }
 

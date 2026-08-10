@@ -162,8 +162,9 @@ export const nikeAdapter: ProductAdapter = {
     if (pageData.status >= 400 || looksBlockedHtml(pageData.html, pageData.status)) {
       return failResult(
         "nike",
-        pageData.status === 403 || pageData.status === 429 ? "blocked" : "error",
+        "unsupported",
         `Nike page/API unavailable (HTTP ${pageData.status}).`,
+        { httpStatus: pageData.status, source: "nike_html" },
       );
     }
 
