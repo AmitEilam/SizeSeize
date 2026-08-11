@@ -707,6 +707,33 @@ input {
   gap: 0.85rem;
 }
 
+.ss-toolbar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ss-status-banner {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.ss-status-banner-ok {
+  background: color-mix(in srgb, var(--ok) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--ok) 28%, var(--line));
+  color: var(--ok);
+}
+
+.ss-status-banner-error {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+  color: var(--danger);
+}
+
 .ss-toolbar-meta {
   margin: 0;
   color: var(--muted);

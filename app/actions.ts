@@ -277,10 +277,14 @@ export async function runCheckAll(
   revalidatePath("/dashboard");
 
   const total = products.length;
+  if (failed === 0) {
+    return {
+      success: `All ${total} product${total === 1 ? "" : "s"} checked successfully.`,
+    };
+  }
+
   return {
-    success: `Checked ${total} product${total === 1 ? "" : "s"}: ${ok} ok${
-      failed > 0 ? `, ${failed} with issues` : ""
-    }.`,
+    success: `Checked ${total} products — ${ok} ok, ${failed} with issue${failed === 1 ? "" : "s"}.`,
   };
 }
 

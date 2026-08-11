@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckAllButton } from "@/app/components/CheckAllButton";
+import { DashboardToolbar } from "@/app/components/DashboardToolbar";
 import { ProductCard } from "@/app/components/ProductCard";
-import { ProductSortControl } from "@/app/components/ProductSortControl";
 import { parseProductSort, sortProducts } from "@/lib/products/sort";
 import { createClient } from "@/lib/supabase/server";
 import type { MonitoredProduct } from "@/lib/types";
@@ -54,15 +53,7 @@ export default async function DashboardPage({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="ss-toolbar">
-            <p className="ss-toolbar-meta">
-              {list.length} monitored product{list.length === 1 ? "" : "s"}
-            </p>
-            <div className="ss-toolbar-controls">
-              <ProductSortControl sort={sort} />
-              <CheckAllButton productCount={list.length} />
-            </div>
-          </div>
+          <DashboardToolbar productCount={list.length} sort={sort} />
 
           {list.map((product) => (
             <ProductCard key={product.id} product={product} />
