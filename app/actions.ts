@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/server";
 export type ActionState = {
   error?: string;
   success?: string;
-  savedSchedule?: { hour: number; minute: number };
 };
 
 export async function signInWithGoogle() {
@@ -339,10 +338,7 @@ export async function updateNotificationSettings(
       return { error: insertError.message };
     }
     revalidatePath("/settings");
-    return {
-      success: "Notification settings saved.",
-      savedSchedule: { hour: hourRaw, minute: minuteRaw },
-    };
+    return { success: "Notification settings saved." };
   }
 
   const currentHour =
@@ -386,28 +382,9 @@ export async function updateNotificationSettings(
 
   revalidatePath("/settings");
 
-  const savedHour =
-    typeof schedule?.updates.pending_check_hour === "number"
-      ? schedule.updates.pending_check_hour
-      : typeof schedule?.updates.preferred_check_hour === "number"
-        ? schedule.updates.preferred_check_hour
-        : hourRaw;
-  const savedMinute =
-    typeof schedule?.updates.pending_check_minute === "number"
-      ? schedule.updates.pending_check_minute
-      : typeof schedule?.updates.preferred_check_minute === "number"
-        ? schedule.updates.preferred_check_minute
-        : minuteRaw;
-
   if (!schedule) {
-    return {
-      success: "Notification settings saved.",
-      savedSchedule: { hour: savedHour, minute: savedMinute },
-    };
+    return { success: "Notification settings saved." };
   }
 
-  return {
-    success: schedule.message,
-    savedSchedule: { hour: savedHour, minute: savedMinute },
-  };
+  return { success: schedule.message };
 }

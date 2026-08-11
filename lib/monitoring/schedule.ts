@@ -1,6 +1,6 @@
 /**
- * Legacy platform cron fire time in UTC (daily-only deployments).
- * Hourly crons in vercel.json use strict per-user local times instead.
+ * Platform cron fire time in UTC — must stay aligned with vercel.json.
+ * Hobby allows one daily invocation; this is when Vercel calls /api/cron/monitor.
  */
 export const PLATFORM_CRON_UTC_HOUR = 9;
 export const PLATFORM_CRON_UTC_MINUTE = 0;
@@ -8,11 +8,6 @@ export const PLATFORM_CRON_UTC_MINUTE = 0;
 export const DEFAULT_TIMEZONE = "Asia/Jerusalem";
 export const DEFAULT_CHECK_HOUR = 12;
 export const DEFAULT_CHECK_MINUTE = 0;
-
-/** Opt out with CRON_STRICT_HOUR=false when stuck on a single daily cron. */
-export function isStrictHourScheduling(): boolean {
-  return process.env.CRON_STRICT_HOUR !== "false";
-}
 
 export type ScheduleProfile = {
   timezone: string;
@@ -176,29 +171,21 @@ export function hasCompletedTodaysScheduledCheck(
     return true;
   }
 
-  // Legacy daily cron: after the user's preferred local time, treat today's slot
-  // as consumed even if last_scheduled_run_on was not recorded yet.
-  if (!isStrictHourScheduling()) {
-    const local = localTimeParts(now, tz);
-    const nowMinutes = local.hour * 60 + local.minute;
-    const preferredMinutes =
-      (profile.preferred_check_hour ?? DEFAULT_CHECK_HOUR) * 60 +
-      (profile.preferred_check_minute ?? DEFAULT_CHECK_MINUTE);
+  const local = localTimeParts(now, tz);
+  const nowMinutes = local.hour * 60 + local.minute;
+  const preferredMinutes =
+    (profile.preferred_check_hour ?? DEFAULT_CHECK_HOUR) * 60 +
+    (profile.preferred_check_minute ?? DEFAULT_CHECK_MINUTE);
 
-    return nowMinutes >= preferredMinutes;
-  }
-
-  return false;
+  return nowMinutes >= preferredMinutes;
 }
 
 /**
  * Whether the scheduled job should process this user right now.
  *
- * Default (strict): hourly cron skips users until their preferred local time,
- * then runs once per calendar day (last_scheduled_run_on).
- *
- * Legacy (CRON_STRICT_HOUR=false): a single daily cron processes everyone when
- * it fires, regardless of preferred hour.
+ * Hobby (default): once Vercel fires the daily cron, process users who have
+ * not completed today's run yet. Preferred hour is still stored for UX and
+ * for strict matching when CRON_STRICT_HOUR=true (e.g. hourly crons later).
  */
 export function shouldRunScheduledCheck(
   profile: ScheduleProfile,
@@ -210,7 +197,7 @@ export function shouldRunScheduledCheck(
     return false;
   }
 
-  if (isStrictHourScheduling()) {
+  if (process.env.CRON_STRICT_HOUR === "true") {
     const schedule = resolveEffectiveSchedule(profile, today);
     const local = localTimeParts(now, tz);
     const nowMinutes = local.hour * 60 + local.minute;

@@ -177,11 +177,19 @@ Add for **Production** (and Preview if you want):
 
 ### 4. Cron schedule
 
-[`vercel.json`](vercel.json) runs the monitor job **every hour** (`0 * * * *`). Each user is checked once per day, the first time an hourly run happens **on or after** their preferred local check time (stored in `profiles`).
+[`vercel.json`](vercel.json) already defines:
 
-Set `CRON_STRICT_HOUR=false` only if you must use a single daily cron (Hobby limit). In that legacy mode, everyone is processed when that one cron fires, regardless of preferred hour.
+```json
+{
+  "crons": [{ "path": "/api/cron/monitor", "schedule": "0 9 * * *" }]
+}
+```
 
-Users can set a preferred local check time and email toggles on **Settings** (`profiles` notification columns from migration `004_notification_preferences.sql`). If today's scheduled check already ran, a new preferred time is queued and applies from tomorrow. Availability alerts still fire only on unavailable → available transitions; daily summary and alert emails can be disabled independently.
+That is **09:00 UTC daily** = **12:00 PM Israel summer time (IDT)**. In winter (IST, UTC+2) the same cron runs at **11:00 AM** Israel time. Hobby allows at most one run per day.
+
+Users can set a preferred local check time and email toggles on the dashboard (`profiles` notification columns from migration `004_notification_preferences.sql`). If today's scheduled check already ran, a new preferred time is queued and applies from tomorrow. Availability alerts still fire only on unavailable → available transitions; daily summary and alert emails can be disabled independently.
+
+Keep `vercel.json` aligned with `PLATFORM_CRON_UTC_HOUR` in `lib/monitoring/schedule.ts` (currently 9). On a plan that allows hourly crons, set `CRON_STRICT_HOUR=true` so the job waits until each user's preferred local time.
 
 ### Browser fallback
 
@@ -213,9 +221,9 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://YOUR_DOMAIN/api/cron/monito
 
 5. Vercel → **Logs** / cron history should show a 200 response
 
-### Later: legacy daily-only cron
+### Later: hourly monitoring
 
-If your Vercel plan only allows one cron per day, change `vercel.json` to `0 9 * * *` and set `CRON_STRICT_HOUR=false`. Preferred times will be stored for UX but checks will run at the fixed UTC time instead of each user's chosen hour.
+When you leave Hobby / enable more frequent crons, change only the schedule in `vercel.json` (e.g. `0 * * * *`). The monitoring core in `lib/monitoring/runDailyJob.ts` does not need a redesign. Optionally split alert checks and the evening summary into two routes later.
 
 ---
 
