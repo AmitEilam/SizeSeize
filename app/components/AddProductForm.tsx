@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { addProduct, type ActionState } from "@/app/actions";
 
@@ -10,9 +11,6 @@ export function AddProductForm() {
 
   return (
     <form action={action} className="ss-card flex flex-col gap-4">
-      <h2 className="m-0 text-[1.15rem] font-bold tracking-[-0.01em]">
-        Add product
-      </h2>
       <div className="ss-field">
         <label htmlFor="product_url">Product URL</label>
         <input
@@ -45,13 +43,20 @@ export function AddProductForm() {
       {state.success ? (
         <p className="text-[0.95rem] text-[var(--ok)]">{state.success}</p>
       ) : null}
-      <button
-        type="submit"
-        className="ss-btn ss-btn-primary w-full sm:w-auto"
-        disabled={pending}
-      >
-        {pending ? "Adding & checking…" : "Add Product"}
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          type="submit"
+          className="ss-btn ss-btn-primary w-full sm:w-auto"
+          disabled={pending}
+        >
+          {pending ? "Adding & checking…" : "Add product"}
+        </button>
+        {state.success ? (
+          <Link href="/dashboard" className="ss-btn ss-btn-secondary w-full sm:w-auto">
+            View dashboard
+          </Link>
+        ) : null}
+      </div>
     </form>
   );
 }

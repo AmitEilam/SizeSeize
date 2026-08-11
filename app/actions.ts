@@ -337,7 +337,7 @@ export async function updateNotificationSettings(
     if (insertError) {
       return { error: insertError.message };
     }
-    revalidatePath("/dashboard");
+    revalidatePath("/settings");
     return { success: "Notification settings saved." };
   }
 
@@ -380,7 +380,7 @@ export async function updateNotificationSettings(
     return { error: updateError.message };
   }
 
-  revalidatePath("/dashboard");
+  revalidatePath("/settings");
 
   if (!schedule) {
     return { success: "Notification settings saved." };

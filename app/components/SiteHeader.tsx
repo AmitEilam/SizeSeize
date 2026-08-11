@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions";
+import { AppNavLinks, AppNavMobile } from "@/app/components/AppNav";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
+import { APP_NAV_ITEMS } from "@/lib/nav";
 
 type SiteHeaderProps = {
   email?: string | null;
   avatarUrl?: string | null;
   fullName?: string | null;
   showAuthActions?: boolean;
+  /** Renders the app sections nav (inline on desktop, hamburger on mobile). */
+  showNav?: boolean;
 };
 
 export function SiteHeader({
@@ -14,15 +18,20 @@ export function SiteHeader({
   avatarUrl,
   fullName,
   showAuthActions = true,
+  showNav = false,
 }: SiteHeaderProps) {
   const signedIn = Boolean(email);
+  const withNav = showNav && signedIn;
 
   return (
-    <header className="ss-header">
+    <header className={`ss-header${withNav ? " ss-header--app" : ""}`}>
       <div className="ss-container ss-header-inner">
-        <Link href="/" className="ss-brand ss-header-brand">
-          SizeSeize
-        </Link>
+        <div className="ss-header-lead">
+          <Link href="/" className="ss-brand ss-header-brand">
+            SizeSeize
+          </Link>
+          {withNav ? <AppNavLinks items={APP_NAV_ITEMS} /> : null}
+        </div>
 
         <div className="ss-header-actions">
           {signedIn ? (
@@ -57,7 +66,10 @@ export function SiteHeader({
                 </Link>
               ) : null}
 
-              <form action={signOut}>
+              <form
+                action={signOut}
+                className={withNav ? "ss-only-wide" : undefined}
+              >
                 <button type="submit" className="ss-btn ss-btn-secondary">
                   Sign out
                 </button>
@@ -70,6 +82,14 @@ export function SiteHeader({
           ) : null}
 
           <ThemeToggle />
+
+          {withNav ? (
+            <AppNavMobile
+              items={APP_NAV_ITEMS}
+              email={email}
+              fullName={fullName}
+            />
+          ) : null}
         </div>
       </div>
     </header>

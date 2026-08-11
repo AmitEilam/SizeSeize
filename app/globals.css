@@ -170,6 +170,7 @@ input {
 }
 
 .ss-header-inner {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -178,10 +179,140 @@ input {
   padding-block: 0.65rem;
 }
 
+.ss-header-lead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
 .ss-header-brand {
   font-size: 1.35rem;
   color: var(--brand);
   text-decoration: none;
+}
+
+/* Section nav: inline links on wide screens, hamburger menu below that. */
+.ss-nav {
+  display: none;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.ss-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  color: var(--muted);
+  font-size: 0.98rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.ss-nav-link:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.ss-nav-link[aria-current="page"] {
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 24%, transparent);
+  color: var(--brand);
+}
+
+.ss-nav-mobile {
+  position: relative;
+  display: flex;
+}
+
+.ss-nav-toggle {
+  padding-inline: 0.8rem;
+}
+
+.ss-nav-panel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(15rem, calc(100vw - 1.75rem));
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.ss-nav-panel[hidden] {
+  display: none;
+}
+
+.ss-nav-panel-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ss-nav-panel-link {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ss-nav-panel-link:hover {
+  background: var(--surface-soft);
+}
+
+.ss-nav-panel-link[aria-current="page"] {
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 24%, transparent);
+  color: var(--brand);
+}
+
+.ss-nav-panel-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+.ss-nav-panel-user {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  min-width: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.ss-nav-panel-user strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.ss-nav-panel-user span,
+.ss-nav-panel-user strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ss-header-actions {
@@ -570,6 +701,47 @@ input {
   max-width: 42rem;
 }
 
+.ss-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ss-toolbar-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.ss-toolbar-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.ss-sort {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.ss-sort-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.ss-sort-field label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.ss-sort .ss-select {
+  min-height: 44px;
+}
+
 .ss-meta-list {
   display: grid;
   gap: 0.65rem;
@@ -632,7 +804,8 @@ input {
   background: #ffffff;
 }
 
-.ss-hide-sm {
+.ss-hide-sm,
+.ss-only-wide {
   display: none;
 }
 
@@ -655,5 +828,51 @@ input {
 
   .ss-card {
     padding: 1.25rem 1.35rem;
+  }
+
+  .ss-toolbar {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .ss-toolbar-meta {
+    padding-bottom: 0.6rem;
+  }
+
+  .ss-toolbar-controls {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: flex-end;
+  }
+
+  .ss-sort {
+    display: flex;
+  }
+
+  .ss-sort-field {
+    width: 10.5rem;
+  }
+}
+
+/* The section nav needs more room than the 640px breakpoint allows. */
+@media (min-width: 768px) {
+  .ss-nav {
+    display: flex;
+  }
+
+  .ss-nav-mobile {
+    display: none;
+  }
+
+  .ss-only-wide {
+    display: inline-flex;
+  }
+}
+
+/* Keep the app header from crowding: name/email only once there is room. */
+@media (max-width: 1023px) {
+  .ss-header--app .ss-user-text {
+    display: none;
   }
 }

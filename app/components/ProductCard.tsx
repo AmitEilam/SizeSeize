@@ -10,6 +10,7 @@ import {
 } from "@/app/actions";
 import type { MonitoredProduct } from "@/lib/types";
 import { formatDesiredSizeLabel } from "@/lib/monitoring/sizeMatch";
+import { getProductStatus } from "@/lib/products/status";
 
 const initial: ActionState = {};
 
@@ -73,21 +74,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
   }, [confirmDelete]);
 
   const title = product.product_name || product.product_url;
-  const statusClass = product.last_check_error
-    ? "ss-badge-muted"
-    : product.desired_size_available
-      ? "ss-badge-ok"
-      : "ss-badge-warn";
-  const statusLabel = product.last_check_error
-    ? product.last_check_error.toLowerCase().includes("confident") ||
-      product.last_check_error.toLowerCase().includes("unsupported")
-      ? "Unsupported"
-      : product.last_check_error.toLowerCase().includes("blocked")
-        ? "Blocked"
-        : "Check error"
-    : product.desired_size_available
-      ? "Available"
-      : "Unavailable";
+  const status = getProductStatus(product);
 
   const showImage = Boolean(product.product_image_url) && !imageFailed;
 
@@ -177,7 +164,9 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
               {product.product_url}
             </a>
           </div>
-          <span className={`ss-badge ${statusClass} w-fit`}>{statusLabel}</span>
+          <span className={`ss-badge ${status.badgeClass} w-fit`}>
+            {status.label}
+          </span>
         </div>
 
         <dl className="ss-meta-list">
