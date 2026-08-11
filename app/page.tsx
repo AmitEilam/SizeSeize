@@ -1,9 +1,9 @@
-import Link from "next/link";
 import {
   getDisplayName,
   getGoogleAvatar,
   SiteHeader,
 } from "@/app/components/SiteHeader";
+import { PendingLink } from "@/app/components/PendingLink";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
@@ -33,12 +33,13 @@ export default async function HomePage() {
             it becomes available - plus a daily stock summary.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
+            <PendingLink
               href={user ? "/dashboard" : "/login"}
               className="ss-btn ss-hero-cta"
+              pendingLabel={user ? "Opening dashboard…" : "Continuing…"}
             >
               {user ? "Open dashboard" : "Continue with Google"}
-            </Link>
+            </PendingLink>
           </div>
         </section>
       </main>
