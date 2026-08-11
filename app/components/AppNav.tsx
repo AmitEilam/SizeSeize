@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/actions";
+import { SignOutButton } from "@/app/components/SignOutButton";
 import type { NavItem } from "@/lib/nav";
 
 function isCurrent(pathname: string | null, href: string) {
@@ -112,9 +113,7 @@ export function AppNavMobile({ items, email, fullName }: AppNavMobileProps) {
             </p>
           ) : null}
           <form action={signOut}>
-            <button type="submit" className="ss-btn ss-btn-secondary w-full">
-              Sign out
-            </button>
+            <SignOutButton className="ss-btn ss-btn-secondary w-full" />
           </form>
         </div>
       </div>

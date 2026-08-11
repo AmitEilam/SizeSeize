@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { runCheckAll, type ActionState } from "@/app/actions";
+import { PendingButton } from "@/app/components/PendingButton";
 import { ProductSortControl } from "@/app/components/ProductSortControl";
 import type { ProductSort } from "@/lib/products/sort";
 
@@ -24,13 +25,14 @@ export function DashboardToolbar({ productCount, sort }: Props) {
         <div className="ss-toolbar-controls">
           <ProductSortControl sort={sort} />
           <form action={action}>
-            <button
+            <PendingButton
               type="submit"
+              pending={pending}
+              pendingLabel="Checking all…"
               className="ss-btn ss-btn-secondary w-full sm:w-auto"
-              disabled={pending}
             >
-              {pending ? "Checking all…" : "Check all"}
-            </button>
+              Check all
+            </PendingButton>
           </form>
         </div>
       </div>

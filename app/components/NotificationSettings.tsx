@@ -6,6 +6,7 @@ import {
   updateNotificationSettings,
   type ActionState,
 } from "@/app/actions";
+import { PendingButton } from "@/app/components/PendingButton";
 import type { Profile } from "@/lib/types";
 import {
   DEFAULT_CHECK_HOUR,
@@ -183,13 +184,14 @@ export function NotificationSettings({ profile }: Props) {
         <p className="m-0 text-[0.95rem] text-[var(--ok)]">{state.success}</p>
       ) : null}
 
-      <button
+      <PendingButton
         type="submit"
+        pending={pending}
+        pendingLabel="Saving…"
         className="ss-btn ss-btn-primary w-full sm:w-auto"
-        disabled={pending}
       >
-        {pending ? "Saving…" : "Save settings"}
-      </button>
+        Save settings
+      </PendingButton>
     </form>
   );
 }

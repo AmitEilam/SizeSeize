@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signInWithGoogle } from "@/app/actions";
+import { GoogleSignInButton } from "@/app/components/GoogleSignInButton";
 import { SiteHeader } from "@/app/components/SiteHeader";
 
 export default async function LoginPage({
@@ -30,9 +31,7 @@ export default async function LoginPage({
           ) : null}
 
           <form action={signInWithGoogle} className="mt-7">
-            <button type="submit" className="ss-btn ss-btn-primary w-full">
-              Continue with Google
-            </button>
+            <GoogleSignInButton />
           </form>
 
           <p className="mt-4 text-center text-sm text-[var(--muted)]">

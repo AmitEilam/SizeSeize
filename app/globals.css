@@ -432,6 +432,27 @@ input {
   cursor: not-allowed;
 }
 
+.ss-btn[aria-busy="true"] {
+  cursor: wait;
+}
+
+.ss-spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+  animation: ss-spin 0.75s linear infinite;
+}
+
+.ss-spinner-head {
+  transform-origin: center;
+}
+
+@keyframes ss-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .ss-btn-primary {
   background: var(--brand);
   color: #f7fff9;

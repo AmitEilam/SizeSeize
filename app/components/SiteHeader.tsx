@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions";
 import { AppNavLinks, AppNavMobile } from "@/app/components/AppNav";
+import { SignOutButton } from "@/app/components/SignOutButton";
 import { ThemeToggle } from "@/app/components/ThemeToggle";
 import { APP_NAV_ITEMS } from "@/lib/nav";
 
@@ -70,9 +71,7 @@ export function SiteHeader({
                 action={signOut}
                 className={withNav ? "ss-only-wide" : undefined}
               >
-                <button type="submit" className="ss-btn ss-btn-secondary">
-                  Sign out
-                </button>
+                <SignOutButton />
               </form>
             </div>
           ) : showAuthActions ? (

@@ -8,6 +8,8 @@ import {
   updateProductSize,
   type ActionState,
 } from "@/app/actions";
+import { DeleteProductButton } from "@/app/components/DeleteProductButton";
+import { PendingButton } from "@/app/components/PendingButton";
 import type { MonitoredProduct } from "@/lib/types";
 import { formatDesiredSizeLabel } from "@/lib/monitoring/sizeMatch";
 import { getProductStatus } from "@/lib/products/status";
@@ -114,9 +116,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
                 </button>
                 <form action={deleteProduct}>
                   <input type="hidden" name="id" value={product.id} />
-                  <button type="submit" className="ss-btn ss-btn-danger">
-                    Yes, delete
-                  </button>
+                  <DeleteProductButton />
                 </form>
               </div>
             </div>
@@ -219,13 +219,14 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
               />
             </div>
             <div className="flex gap-2">
-              <button
+              <PendingButton
                 type="submit"
+                pending={updating}
+                pendingLabel="Saving…"
                 className="ss-btn ss-btn-primary"
-                disabled={updating}
               >
                 Save
-              </button>
+              </PendingButton>
               <button
                 type="button"
                 className="ss-btn ss-btn-secondary"
@@ -261,13 +262,14 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           </button>
           <form action={checkAction}>
             <input type="hidden" name="id" value={product.id} />
-            <button
+            <PendingButton
               type="submit"
+              pending={checking}
+              pendingLabel="Checking…"
               className="ss-btn ss-btn-secondary w-full sm:w-auto"
-              disabled={checking}
             >
-              {checking ? "Checking…" : "Check now"}
-            </button>
+              Check now
+            </PendingButton>
           </form>
           <button
             type="button"

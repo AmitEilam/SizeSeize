@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { addProduct, type ActionState } from "@/app/actions";
+import { PendingButton } from "@/app/components/PendingButton";
 
 const initial: ActionState = {};
 
@@ -44,13 +45,14 @@ export function AddProductForm() {
         <p className="text-[0.95rem] text-[var(--ok)]">{state.success}</p>
       ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <button
+        <PendingButton
           type="submit"
+          pending={pending}
+          pendingLabel="Adding & checking…"
           className="ss-btn ss-btn-primary w-full sm:w-auto"
-          disabled={pending}
         >
-          {pending ? "Adding & checking…" : "Add product"}
-        </button>
+          Add product
+        </PendingButton>
         {state.success ? (
           <Link href="/dashboard" className="ss-btn ss-btn-secondary w-full sm:w-auto">
             View dashboard
