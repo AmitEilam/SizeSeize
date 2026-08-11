@@ -2,6 +2,7 @@ import { detectProductAvailability } from "@/lib/adapters/detect";
 import { sendAvailabilityAlert } from "@/lib/email/alert";
 import { sendDailySummary, type SummaryProduct } from "@/lib/email/summary";
 import {
+  isStrictHourScheduling,
   localDateString,
   promotePendingScheduleIfDue,
   shouldRunScheduledCheck,
@@ -114,7 +115,9 @@ export async function runMonitoringJob(): Promise<JobReport> {
         productId: userId,
         ok: true,
         skipped: true,
-        error: "Skipped: already ran today or preferred hour not reached",
+        error: isStrictHourScheduling()
+          ? "Skipped: already ran today or preferred local time not reached yet"
+          : "Skipped: already ran today",
       });
       continue;
     }

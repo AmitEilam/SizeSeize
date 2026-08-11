@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import {
   updateNotificationSettings,
@@ -27,6 +28,7 @@ type Props = {
 };
 
 export function NotificationSettings({ profile }: Props) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(
     updateNotificationSettings,
     initial,
@@ -38,6 +40,12 @@ export function NotificationSettings({ profile }: Props) {
   useEffect(() => {
     setTimezone(detectBrowserTimezone());
   }, []);
+
+  useEffect(() => {
+    if (state.success) {
+      router.refresh();
+    }
+  }, [state.success, router]);
 
   const scheduleProfile = {
     timezone,
@@ -62,6 +70,10 @@ export function NotificationSettings({ profile }: Props) {
       ? effective.pendingMinute
       : effective.minute;
 
+  const selectHour = state.savedSchedule?.hour ?? displayHour;
+  const selectMinute = state.savedSchedule?.minute ?? displayMinute;
+  const scheduleSelectKey = `${selectHour}:${selectMinute}`;
+
   const nextRun = describeNextScheduledRun(scheduleProfile);
 
   return (
@@ -74,7 +86,8 @@ export function NotificationSettings({ profile }: Props) {
         </h2>
         <p className="mt-2 mb-0 text-[0.95rem] leading-relaxed text-[var(--muted)]">
           Choose which emails to receive and what time the daily check should
-          run. Times are shown in your local time.
+          run in your local time. The job runs hourly and checks your products
+          once your preferred time has been reached each day.
         </p>
       </div>
 
@@ -117,13 +130,16 @@ export function NotificationSettings({ profile }: Props) {
         <p className="mb-2 mt-0 text-sm font-semibold tracking-wide text-[var(--muted)]">
           Daily check time
         </p>
-        <div className="grid max-w-xs grid-cols-2 gap-3">
+        <div
+          key={scheduleSelectKey}
+          className="grid max-w-xs grid-cols-2 gap-3"
+        >
           <div className="ss-field">
             <label htmlFor="preferred_check_hour">Hour</label>
             <select
               id="preferred_check_hour"
               name="preferred_check_hour"
-              defaultValue={displayHour}
+              defaultValue={selectHour}
               className="ss-select"
             >
               {hourOptions().map((hour) => (
@@ -138,7 +154,7 @@ export function NotificationSettings({ profile }: Props) {
             <select
               id="preferred_check_minute"
               name="preferred_check_minute"
-              defaultValue={displayMinute}
+              defaultValue={selectMinute}
               className="ss-select"
             >
               {[0, 15, 30, 45].map((minute) => (
@@ -156,8 +172,8 @@ export function NotificationSettings({ profile }: Props) {
           <strong className="text-[var(--ink)]">{nextRun.label}</strong>
         </p>
         <p className="mt-2 mb-0">
-          Checks run once per day. If you change the time after today&apos;s
-          check has already run, the new schedule applies from tomorrow.
+          If you change the time after today&apos;s check has already run, the
+          new schedule applies from tomorrow.
         </p>
       </div>
 
