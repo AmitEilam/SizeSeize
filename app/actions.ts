@@ -17,14 +17,11 @@ export async function signInWithGoogle() {
   const supabase = await createClient();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+  // Avoid prompt=consent / access_type=offline so returning users are not re-prompted every login.
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: `${appUrl}/auth/callback`,
-      queryParams: {
-        access_type: "offline",
-        prompt: "consent",
-      },
     },
   });
 

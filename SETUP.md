@@ -56,24 +56,22 @@ Keep `.env.local` private. Never commit secrets.
 
 1. Open [Google Cloud Console](https://console.cloud.google.com/)
 2. Create or select a project (e.g. `SizeSeize`)
-3. Go to **APIs & Services → OAuth consent screen**
-   - User type: **External** (unless you use Workspace internal)
-   - App name: `SizeSeize`
-   - Support email: your email
-   - Save
+3. Configure the **OAuth consent screen / Branding** (see “Google branding” below)
 4. Go to **APIs & Services → Credentials → Create credentials → OAuth client ID**
    - Application type: **Web application**
    - Name: `SizeSeize Web`
 5. Under **Authorized JavaScript origins**, add:
    - `http://localhost:3000`
-   - Your future production URL (e.g. `https://sizeseize.vercel.app`) when known
-6. Under **Authorized redirect URIs**, add the Supabase callback:
+   - Your production app URL (e.g. `https://sizeseize.vercel.app` or your custom domain)
+6. Under **Authorized redirect URIs**, add the Supabase callback only:
 
 ```text
 https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback
 ```
 
 Replace `YOUR_PROJECT_REF` with the subdomain from your Supabase Project URL.
+
+Do **not** put your Vercel/app URL here as the Google redirect — Google must redirect to Supabase first; Supabase then sends the user to `/auth/callback` on your app.
 
 7. Click **Create**
 8. Copy **Client ID** and **Client Secret**
@@ -83,15 +81,17 @@ Replace `YOUR_PROJECT_REF` with the subdomain from your Supabase Project URL.
 1. Supabase → **Authentication → Providers → Google**
 2. Enable Google
 3. Paste **Client ID** and **Client Secret**
-4. Save
+4. Leave any “Skip nonce check” / extra options at defaults unless you know you need them
+5. Save
 
 ### 3. Configure auth redirect URLs in Supabase
 
 1. Supabase → **Authentication → URL Configuration**
-2. **Site URL**: `http://localhost:3000` (change to production URL after deploy)
+2. **Site URL**: your production app origin (e.g. `https://YOUR_VERCEL_DOMAIN` or custom domain). Use `http://localhost:3000` only while testing locally.
 3. **Redirect URLs** include:
    - `http://localhost:3000/auth/callback`
    - `https://YOUR_VERCEL_DOMAIN/auth/callback` (after deploy)
+   - `https://YOUR_CUSTOM_DOMAIN/auth/callback` (if you use a custom domain)
 
 ### 4. Local env
 
@@ -101,15 +101,57 @@ In `.env.local`:
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
+In production (Vercel), set `NEXT_PUBLIC_APP_URL` to the same origin users use in the browser.
+
+### 5. Google branding (manual — required for app name instead of raw `*.supabase.co`)
+
+Google decides what users see on the consent / “Continue to …” screens. App code cannot rename that host. Configure this in Google Cloud (and optionally Supabase custom domain).
+
+**A. Google Auth Platform → Branding / OAuth consent screen**
+
+Use the newer console if available: [Google Auth Platform → Branding](https://console.cloud.google.com/auth/branding), or classic **APIs & Services → OAuth consent screen**.
+
+Set:
+
+| Field | Recommended value |
+| --- | --- |
+| App name | `SizeSeize` |
+| User support email | Your email |
+| App logo | Square logo (min ~120×120) |
+| Application home page | Your public site URL (production) |
+| Privacy policy URL | Required for production / verification |
+| Terms of service URL | Recommended |
+| Authorized domains | Your app domain (e.g. `vercel.app` or your custom domain). Domain must be verified in [Google Search Console](https://search.google.com/search-console) when Google asks. |
+| Audience | **External** for public users; publish the app (move out of Testing) when ready |
+
+Important Google behavior:
+
+- Until **brand verification** (and often until the app is **In production** / published), Google may still show a domain-style label instead of your logo/name.
+- Verification can take a few business days after you submit branding.
+- Official Supabase note: configure [Branding](https://console.cloud.google.com/auth/branding) + [Verification](https://console.cloud.google.com/auth/verification) so the consent screen shows your logo/name instead of the project id / host.
+
+**B. What still shows `….supabase.co` (and what fixes it)**
+
+| Surface | What users see | How to improve |
+| --- | --- | --- |
+| Consent screen app name / logo | Controlled by Google Branding | App name, logo, publish, brand verification |
+| “Continue to …” / redirect host | Often `YOUR_REF.supabase.co` because that is Google’s authorized redirect URI | Optional: [Supabase Custom Domains](https://supabase.com/docs/guides/platform/custom-domains) (e.g. `auth.yourdomain.com`), then update Google **Authorized redirect URIs** to `https://auth.yourdomain.com/auth/v1/callback` and keep Supabase Google provider credentials in sync |
+| Google security emails (“new sign-in”, access granted) | Google Account emails | Mostly reduced by **not** forcing `prompt=consent` on every login (already fixed in app code). Remaining emails are Google’s own alerts and cannot be fully disabled from the app |
+
+Do **not** change the Google redirect URI away from Supabase’s callback unless you also configure the matching Supabase Auth custom domain — otherwise login breaks.
+
+### 6. Consent on every login (app code)
+
+`signInWithGoogle` must **not** send Google query params like `prompt=consent` or `access_type=offline` unless you truly need offline Google API refresh tokens. Those options force re-consent and often trigger Google access/security emails on every login. Returning users should sign in without re-granting the same scopes.
+
 ### How to verify
 
-1. Run `npm run dev`
-2. Open `http://localhost:3000/login`
-3. Click **Continue with Google**
-4. Complete OAuth
-5. You should land on `/dashboard`
-6. Supabase → **Authentication → Users** should show your user
-7. `profiles` should contain your email (via trigger)
+1. Run `npm run dev` (or use production)
+2. Open `/login` → **Continue with Google**
+3. Returning user: account chooser / quick sign-in, **no** full permissions consent every time
+4. You land on `/dashboard`
+5. Supabase → **Authentication → Users** shows the user; `profiles` has the email
+6. After Google branding is published/verified, consent UI shows **SizeSeize** (and logo) rather than only the raw project host
 
 ---
 
