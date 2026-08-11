@@ -2,7 +2,7 @@
  * Platform cron fire time in UTC — must stay aligned with vercel.json.
  * Hobby allows one daily invocation; this is when Vercel calls /api/cron/monitor.
  */
-export const PLATFORM_CRON_UTC_HOUR = 9;
+export const PLATFORM_CRON_UTC_HOUR = 11;
 export const PLATFORM_CRON_UTC_MINUTE = 0;
 
 export const DEFAULT_TIMEZONE = "Asia/Jerusalem";

@@ -181,15 +181,15 @@ Add for **Production** (and Preview if you want):
 
 ```json
 {
-  "crons": [{ "path": "/api/cron/monitor", "schedule": "0 9 * * *" }]
+  "crons": [{ "path": "/api/cron/monitor", "schedule": "0 11 * * *" }]
 }
 ```
 
-That is **09:00 UTC daily** = **12:00 PM Israel summer time (IDT)**. In winter (IST, UTC+2) the same cron runs at **11:00 AM** Israel time. Hobby allows at most one run per day.
+That is **11:00 UTC daily** = **2:00 PM Israel summer time (IDT)**. In winter (IST, UTC+2) the same cron runs at **1:00 PM** Israel time. Hobby allows at most one run per day.
 
-Users can set a preferred local check time and email toggles on the dashboard (`profiles` notification columns from migration `004_notification_preferences.sql`). If today's scheduled check already ran, a new preferred time is queued and applies from tomorrow. Availability alerts still fire only on unavailable → available transitions; daily summary and alert emails can be disabled independently.
+Users can set a preferred local check time and email toggles on **Settings** (`profiles` notification columns from migration `004_notification_preferences.sql`). If today's scheduled check already ran, a new preferred time is queued and applies from tomorrow. Availability alerts still fire only on unavailable → available transitions; daily summary and alert emails can be disabled independently.
 
-Keep `vercel.json` aligned with `PLATFORM_CRON_UTC_HOUR` in `lib/monitoring/schedule.ts` (currently 9). On a plan that allows hourly crons, set `CRON_STRICT_HOUR=true` so the job waits until each user's preferred local time.
+Keep `vercel.json` aligned with `PLATFORM_CRON_UTC_HOUR` in `lib/monitoring/schedule.ts` (currently 11). On a plan that allows hourly crons, set `CRON_STRICT_HOUR=true` so the job waits until each user's preferred local time.
 
 ### Browser fallback
 
