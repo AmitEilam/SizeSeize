@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardToolbar } from "@/app/components/DashboardToolbar";
 import { ProductCard } from "@/app/components/ProductCard";
-import { parseProductSort, sortProducts } from "@/lib/products/sort";
+import {
+  filterProducts,
+  parseDashboardParams,
+} from "@/lib/products/search";
+import { sortProducts } from "@/lib/products/sort";
 import { createClient } from "@/lib/supabase/server";
 import type { MonitoredProduct } from "@/lib/types";
 
@@ -29,8 +33,10 @@ export default async function DashboardPage({
     searchParams,
   ]);
 
-  const sort = parseProductSort(params);
-  const list = sortProducts((products ?? []) as MonitoredProduct[], sort);
+  const { sort, q } = parseDashboardParams(params);
+  const allProducts = (products ?? []) as MonitoredProduct[];
+  const filtered = filterProducts(allProducts, q);
+  const list = sortProducts(filtered, sort);
 
   return (
     <>
@@ -42,7 +48,7 @@ export default async function DashboardPage({
         </p>
       </div>
 
-      {list.length === 0 ? (
+      {allProducts.length === 0 ? (
         <div className="ss-card flex flex-col items-start gap-4">
           <p className="m-0 text-[1.05rem] leading-relaxed text-[var(--muted)]">
             No products yet. Add your first product URL to start monitoring.
@@ -53,11 +59,26 @@ export default async function DashboardPage({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          <DashboardToolbar productCount={list.length} sort={sort} />
+          <DashboardToolbar
+            productCount={list.length}
+            totalCount={allProducts.length}
+            sort={sort}
+            query={q}
+          />
 
-          {list.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {list.length === 0 ? (
+            <div className="ss-card">
+              <p className="m-0 text-[1.05rem] leading-relaxed text-[var(--muted)]">
+                No products match{" "}
+                <strong className="text-[var(--ink)]">&ldquo;{q}&rdquo;</strong>
+                . Try a different name, URL, size, or status.
+              </p>
+            </div>
+          ) : (
+            list.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          )}
         </div>
       )}
     </>

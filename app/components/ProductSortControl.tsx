@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useOptimistic, useTransition } from "react";
+import { buildDashboardQuery } from "@/lib/products/search";
 import {
-  buildProductSortQuery,
   PRODUCT_SORT_DIRECTION_LABELS,
   PRODUCT_SORT_FIELD_LABELS,
   PRODUCT_SORT_FIELDS,
@@ -12,7 +12,12 @@ import {
   type SortDirection,
 } from "@/lib/products/sort";
 
-export function ProductSortControl({ sort }: { sort: ProductSort }) {
+type Props = {
+  sort: ProductSort;
+  query: string;
+};
+
+export function ProductSortControl({ sort, query }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [current, setCurrent] = useOptimistic(sort);
@@ -20,9 +25,10 @@ export function ProductSortControl({ sort }: { sort: ProductSort }) {
   function apply(next: ProductSort) {
     startTransition(() => {
       setCurrent(next);
-      router.replace(`/dashboard?${buildProductSortQuery(next)}`, {
-        scroll: false,
-      });
+      router.replace(
+        `/dashboard?${buildDashboardQuery({ sort: next, q: query })}`,
+        { scroll: false },
+      );
     });
   }
 
