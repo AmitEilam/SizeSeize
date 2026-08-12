@@ -26,9 +26,12 @@ const themeInitScript = `
   try {
     var key = 'sizeseize-theme';
     var stored = localStorage.getItem(key);
-    var theme = (stored === 'light' || stored === 'dark')
+    var preference = (stored === 'light' || stored === 'dark' || stored === 'system')
       ? stored
-      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      : 'system';
+    var theme = preference === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : preference;
     document.documentElement.setAttribute('data-theme', theme);
   } catch (e) {
     document.documentElement.setAttribute('data-theme', 'light');

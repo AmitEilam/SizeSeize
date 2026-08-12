@@ -404,6 +404,62 @@ input {
   display: none;
 }
 
+.ss-theme-picker {
+  position: relative;
+  display: flex;
+}
+
+.ss-theme-menu {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 10.5rem;
+  padding: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.ss-theme-menu[hidden] {
+  display: none;
+}
+
+.ss-theme-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ss-theme-menu-option:hover {
+  background: var(--surface-soft);
+}
+
+.ss-theme-menu-option[aria-selected="true"] {
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 24%, transparent);
+  color: var(--brand);
+}
+
+.ss-theme-menu-check {
+  margin-left: auto;
+}
+
 .ss-btn {
   display: inline-flex;
   align-items: center;

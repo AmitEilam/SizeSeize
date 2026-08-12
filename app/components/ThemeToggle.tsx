@@ -1,65 +1,143 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  THEME_PREFERENCE_LABELS,
+  type ThemePreference,
+  applyResolvedTheme,
+  getStoredPreference,
+  resolveTheme,
+  setThemePreference,
+} from "@/lib/theme";
 
-export type ThemeMode = "light" | "dark";
-
-const STORAGE_KEY = "sizeseize-theme";
-
-function applyTheme(theme: ThemeMode) {
-  document.documentElement.setAttribute("data-theme", theme);
-}
-
-export function getStoredTheme(): ThemeMode {
-  if (typeof window === "undefined") return "light";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
+const OPTIONS: ThemePreference[] = ["system", "light", "dark"];
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<ThemeMode>("light");
+  const [preference, setPreference] = useState<ThemePreference>("system");
+  const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const initial = getStoredTheme();
-    setTheme(initial);
-    applyTheme(initial);
+    const stored = getStoredPreference();
+    setPreference(stored);
+    applyResolvedTheme(resolveTheme(stored));
     setMounted(true);
   }, []);
 
-  function toggle() {
-    const next: ThemeMode = theme === "light" ? "dark" : "light";
-    setTheme(next);
-    applyTheme(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+  useEffect(() => {
+    if (preference !== "system") return;
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => applyResolvedTheme(resolveTheme("system"));
+
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [preference]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Node && wrapperRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
+  function choose(next: ThemePreference) {
+    setPreference(next);
+    setThemePreference(next);
+    setOpen(false);
   }
 
+  const label = mounted
+    ? THEME_PREFERENCE_LABELS[preference]
+    : THEME_PREFERENCE_LABELS.system;
+
   return (
-    <button
-      type="button"
-      className="ss-btn ss-btn-secondary ss-theme-toggle"
-      onClick={toggle}
-      aria-label={
-        mounted
-          ? theme === "light"
-            ? "Switch to dark mode"
-            : "Switch to light mode"
-          : "Toggle color theme"
-      }
-      title={mounted ? (theme === "light" ? "Dark mode" : "Light mode") : "Theme"}
-    >
-      {mounted && theme === "light" ? (
-        <MoonIcon />
-      ) : (
-        <SunIcon />
-      )}
-      <span className="ss-theme-toggle-label">
-        {mounted ? (theme === "light" ? "Dark" : "Light") : "Theme"}
-      </span>
-    </button>
+    <div className="ss-theme-picker" ref={wrapperRef}>
+      <button
+        type="button"
+        className="ss-btn ss-btn-secondary ss-theme-toggle"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls="ss-theme-menu"
+        aria-label={`Theme: ${label}. Choose light, dark, or system.`}
+        title={`Theme: ${label}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <ThemeIcon preference={mounted ? preference : "system"} />
+        <span className="ss-theme-toggle-label">{label}</span>
+      </button>
+
+      <div
+        id="ss-theme-menu"
+        className="ss-theme-menu"
+        role="listbox"
+        aria-label="Theme"
+        hidden={!open}
+      >
+        {OPTIONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="option"
+            aria-selected={preference === option}
+            className="ss-theme-menu-option"
+            onClick={() => choose(option)}
+          >
+            <ThemeIcon preference={option} />
+            <span>{THEME_PREFERENCE_LABELS[option]}</span>
+            {preference === option ? <CheckIcon /> : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ThemeIcon({ preference }: { preference: ThemePreference }) {
+  if (preference === "light") return <SunIcon />;
+  if (preference === "dark") return <MoonIcon />;
+  return <SystemIcon />;
+}
+
+function SystemIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect
+        x="3.5"
+        y="5.5"
+        width="17"
+        height="11"
+        rx="1.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M9 19.5h6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
@@ -86,6 +164,27 @@ function SunIcon() {
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className="ss-theme-menu-check"
+    >
+      <path
+        d="M5 12.5 10 17.5 19 7.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
