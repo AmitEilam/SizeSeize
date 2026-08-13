@@ -67,7 +67,7 @@ export function ProductSearchControl({ query, sort }: Props) {
           id="product-search"
           type="search"
           className="ss-search-input"
-          placeholder="Search by name, URL, size, or status…"
+          placeholder="Search by name, URL, size, note, or status…"
           defaultValue={query}
           onChange={(event) => scheduleApply(event.target.value)}
         />

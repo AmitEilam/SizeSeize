@@ -10,6 +10,7 @@ export type MonitoredProduct = {
   last_checked_at: string | null;
   last_notification_sent_at: string | null;
   last_check_error: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
 };

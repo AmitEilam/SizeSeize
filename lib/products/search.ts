@@ -43,6 +43,7 @@ function searchableText(product: MonitoredProduct): string {
     product.product_name,
     product.product_url,
     product.desired_size,
+    product.note,
     getProductStatus(product).label,
     product.last_check_error,
     product.last_known_available_sizes?.join(" "),

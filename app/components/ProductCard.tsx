@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   deleteProduct,
   runCheckNow,
+  updateProductNote,
   updateProductSize,
   type ActionState,
 } from "@/app/actions";
@@ -30,6 +31,7 @@ function formatChecked(value: string | null) {
 
 export function ProductCard({ product }: { product: MonitoredProduct }) {
   const [editing, setEditing] = useState(false);
+  const [editingNote, setEditingNote] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -39,6 +41,10 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
   );
   const [checkState, checkAction, checking] = useActionState(
     runCheckNow,
+    initial,
+  );
+  const [noteState, noteAction, savingNote] = useActionState(
+    updateProductNote,
     initial,
   );
 
@@ -51,6 +57,12 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
       setEditing(false);
     }
   }, [updateState.success]);
+
+  useEffect(() => {
+    if (noteState.success) {
+      setEditingNote(false);
+    }
+  }, [noteState.success]);
 
   useEffect(() => {
     setImageFailed(false);
@@ -201,6 +213,76 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           ) : null}
         </dl>
 
+        <div className="ss-product-note-section">
+          <div className="ss-product-note-header">
+            <p className="ss-product-note-label">Personal note</p>
+            {!editingNote ? (
+              <button
+                type="button"
+                className="ss-btn ss-btn-secondary ss-product-note-toggle"
+                onClick={() => {
+                  setEditingNote(true);
+                  setEditing(false);
+                  setConfirmDelete(false);
+                }}
+              >
+                {product.note ? "Edit note" : "Add note"}
+              </button>
+            ) : null}
+          </div>
+
+          {editingNote ? (
+            <form action={noteAction} className="flex flex-col gap-3">
+              <input type="hidden" name="id" value={product.id} />
+              <div className="ss-field">
+                <label htmlFor={`note-${product.id}`} className="sr-only">
+                  Personal note
+                </label>
+                <textarea
+                  id={`note-${product.id}`}
+                  name="note"
+                  className="ss-textarea"
+                  rows={3}
+                  maxLength={2000}
+                  defaultValue={product.note ?? ""}
+                  placeholder="Coupon code, reminder, or anything to keep handy when this size is back."
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <PendingButton
+                  type="submit"
+                  pending={savingNote}
+                  pendingLabel="Saving…"
+                  className="ss-btn ss-btn-primary w-full sm:w-auto"
+                >
+                  Save note
+                </PendingButton>
+                <button
+                  type="button"
+                  className="ss-btn ss-btn-secondary w-full sm:w-auto"
+                  onClick={() => setEditingNote(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : product.note ? (
+            <p className="ss-product-note">{product.note}</p>
+          ) : (
+            <p className="ss-product-note-empty">
+              Save a coupon code or reminder for when this product becomes
+              available.
+            </p>
+          )}
+
+          {noteState.error ? (
+            <p className="m-0 text-sm text-[var(--danger)]">{noteState.error}</p>
+          ) : null}
+          {!editingNote && noteState.success ? (
+            <p className="m-0 text-sm text-[var(--ok)]">{noteState.success}</p>
+          ) : null}
+        </div>
+
         {editing ? (
           <form
             action={updateAction}
@@ -255,6 +337,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
             className="ss-btn ss-btn-secondary"
             onClick={() => {
               setEditing(true);
+              setEditingNote(false);
               setConfirmDelete(false);
             }}
           >
@@ -277,6 +360,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
             onClick={() => {
               setConfirmDelete(true);
               setEditing(false);
+              setEditingNote(false);
             }}
           >
             Delete

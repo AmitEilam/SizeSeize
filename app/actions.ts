@@ -168,6 +168,50 @@ export async function updateProductSize(
   };
 }
 
+const MAX_PRODUCT_NOTE_LENGTH = 2000;
+
+export async function updateProductNote(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const id = String(formData.get("id") ?? "");
+  const noteRaw = String(formData.get("note") ?? "").trim();
+
+  if (!id) {
+    return { error: "Missing product id." };
+  }
+
+  if (noteRaw.length > MAX_PRODUCT_NOTE_LENGTH) {
+    return {
+      error: `Notes can be at most ${MAX_PRODUCT_NOTE_LENGTH} characters.`,
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be signed in." };
+  }
+
+  const { error } = await supabase
+    .from("monitored_products")
+    .update({ note: noteRaw.length > 0 ? noteRaw : null })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath("/dashboard");
+  return {
+    success: noteRaw.length > 0 ? "Note saved." : "Note removed.",
+  };
+}
+
 export async function deleteProduct(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
