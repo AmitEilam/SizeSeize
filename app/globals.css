@@ -993,13 +993,19 @@ input {
 
 .ss-meta-list {
   display: grid;
-  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
   margin: 0;
+}
+
+.ss-meta-list > :not(.ss-meta-row) {
+  grid-column: 1 / -1;
 }
 
 .ss-meta-row {
   display: grid;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .ss-meta-row dt {
