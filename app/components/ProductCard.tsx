@@ -182,37 +182,41 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           </span>
         </div>
 
-        <dl className="ss-meta-list">
-          <div className="ss-meta-row">
-            <dt>Desired size</dt>
-            <dd className="font-semibold">
-              {formatDesiredSizeLabel(product.desired_size)}
-            </dd>
-          </div>
-          <div className="ss-meta-row">
-            <dt>Available sizes</dt>
-            <dd>
-              {product.last_known_available_sizes?.length
-                ? product.last_known_available_sizes.join(", ")
-                : !product.last_checked_at
-                  ? "-"
-                  : product.desired_size?.trim()
-                    ? "-"
-                    : product.desired_size_available
-                      ? "In stock"
-                      : "Out of stock"}
-            </dd>
-          </div>
-          <div className="ss-meta-row">
-            <dt>Last checked</dt>
-            <dd>{formatChecked(product.last_checked_at)}</dd>
-          </div>
-          {product.last_check_error ? (
-            <div className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] px-3 py-2 text-[0.95rem] text-[var(--danger)]">
-              {product.last_check_error}
+        <div
+          className={`ss-product-meta-section ss-product-meta-section--${status.key}`}
+        >
+          <dl className="ss-meta-list">
+            <div className="ss-meta-row">
+              <dt>Desired size</dt>
+              <dd className="font-semibold">
+                {formatDesiredSizeLabel(product.desired_size)}
+              </dd>
             </div>
-          ) : null}
-        </dl>
+            <div className="ss-meta-row">
+              <dt>Available sizes</dt>
+              <dd>
+                {product.last_known_available_sizes?.length
+                  ? product.last_known_available_sizes.join(", ")
+                  : !product.last_checked_at
+                    ? "-"
+                    : product.desired_size?.trim()
+                      ? "-"
+                      : product.desired_size_available
+                        ? "In stock"
+                        : "Out of stock"}
+              </dd>
+            </div>
+            <div className="ss-meta-row">
+              <dt>Last checked</dt>
+              <dd>{formatChecked(product.last_checked_at)}</dd>
+            </div>
+            {product.last_check_error ? (
+              <div className="rounded-lg bg-[color-mix(in_srgb,var(--danger)_12%,transparent)] px-3 py-2 text-[0.95rem] text-[var(--danger)]">
+                {product.last_check_error}
+              </div>
+            ) : null}
+          </dl>
+        </div>
 
         <div className="ss-product-note-section">
           <div className="ss-product-note-header">

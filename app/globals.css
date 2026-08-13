@@ -609,6 +609,30 @@ input {
   background: var(--surface-soft);
 }
 
+.ss-product-meta-section {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: var(--surface-soft);
+}
+
+.ss-product-meta-section--available {
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
+  background: color-mix(in srgb, var(--ok) 8%, var(--surface-soft));
+}
+
+.ss-product-meta-section--unavailable {
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--line));
+  background: color-mix(in srgb, var(--warn) 8%, var(--surface-soft));
+}
+
+.ss-product-meta-section--blocked,
+.ss-product-meta-section--unsupported,
+.ss-product-meta-section--error {
+  border-color: color-mix(in srgb, var(--muted) 55%, var(--line));
+  background: color-mix(in srgb, var(--muted) 8%, var(--surface-soft));
+}
+
 .ss-product-note-header {
   display: flex;
   align-items: center;
