@@ -789,6 +789,10 @@ input {
   /* marker class for desktop side-by-side layout */
 }
 
+.ss-product-card--with-image .ss-product-media {
+  align-self: center;
+}
+
 .ss-product-media {
   display: block;
   overflow: hidden;
@@ -834,7 +838,6 @@ input {
     width: 118px;
     max-height: none;
     aspect-ratio: 3 / 4;
-    align-self: stretch;
   }
 }
 
