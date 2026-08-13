@@ -217,17 +217,47 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
           <div className="ss-product-note-header">
             <p className="ss-product-note-label">Personal note</p>
             {!editingNote ? (
-              <button
-                type="button"
-                className="ss-btn ss-btn-secondary ss-product-note-toggle"
-                onClick={() => {
-                  setEditingNote(true);
-                  setEditing(false);
-                  setConfirmDelete(false);
-                }}
-              >
-                {product.note ? "Edit note" : "Add note"}
-              </button>
+              <div className="ss-product-note-actions">
+                {product.note ? (
+                  <>
+                    <button
+                      type="button"
+                      className="ss-btn ss-btn-secondary ss-product-note-toggle"
+                      onClick={() => {
+                        setEditingNote(true);
+                        setEditing(false);
+                        setConfirmDelete(false);
+                      }}
+                    >
+                      Edit note
+                    </button>
+                    <form action={noteAction}>
+                      <input type="hidden" name="id" value={product.id} />
+                      <input type="hidden" name="note" value="" />
+                      <PendingButton
+                        type="submit"
+                        pending={savingNote}
+                        pendingLabel="Removing…"
+                        className="ss-btn ss-btn-danger ss-product-note-toggle"
+                      >
+                        Remove note
+                      </PendingButton>
+                    </form>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="ss-btn ss-btn-secondary ss-product-note-toggle"
+                    onClick={() => {
+                      setEditingNote(true);
+                      setEditing(false);
+                      setConfirmDelete(false);
+                    }}
+                  >
+                    Add note
+                  </button>
+                )}
+              </div>
             ) : null}
           </div>
 
