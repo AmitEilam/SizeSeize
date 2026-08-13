@@ -234,7 +234,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
                         setConfirmDelete(false);
                       }}
                     >
-                      Edit note
+                      Edit
                     </button>
                     <form action={noteAction}>
                       <input type="hidden" name="id" value={product.id} />
@@ -245,7 +245,7 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
                         pendingLabel="Removing…"
                         className="ss-btn ss-btn-danger ss-product-note-toggle"
                       >
-                        Remove note
+                        Remove
                       </PendingButton>
                     </form>
                   </>
