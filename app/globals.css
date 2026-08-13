@@ -845,6 +845,22 @@ input {
   line-height: 1.35;
   overflow-wrap: break-word;
   word-break: normal;
+  min-width: 0;
+  flex: 1;
+}
+
+.ss-product-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ss-product-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .ss-product-link {

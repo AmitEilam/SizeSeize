@@ -163,23 +163,23 @@ export function ProductCard({ product }: { product: MonitoredProduct }) {
       ) : null}
 
       <div className="ss-product-body">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
+        <div className="ss-product-header">
+          <div className="ss-product-title-row">
             <h3 className="ss-product-title" title={title}>
               {title}
             </h3>
-            <a
-              href={product.product_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ss-product-link"
-            >
-              {product.product_url}
-            </a>
+            <span className={`ss-badge ${status.badgeClass} shrink-0`}>
+              {status.label}
+            </span>
           </div>
-          <span className={`ss-badge ${status.badgeClass} w-fit`}>
-            {status.label}
-          </span>
+          <a
+            href={product.product_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ss-product-link"
+          >
+            {product.product_url}
+          </a>
         </div>
 
         <div
