@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkProductNow } from "@/lib/monitoring/checkProduct";
 import { buildScheduleUpdate, isValidTimezone, DEFAULT_TIMEZONE } from "@/lib/monitoring/schedule";
+import { getProductStatusKey } from "@/lib/products/status";
 import { cleanSizeLabel } from "@/lib/sizes";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = {
   error?: string;
   success?: string;
+  checkAllUpdates?: "unchanged" | "updated";
   savedSchedule?: { hour: number; minute: number };
 };
 
@@ -249,7 +251,7 @@ export async function runCheckAll(
 
   const { data: products, error } = await supabase
     .from("monitored_products")
-    .select("id")
+    .select("id, last_check_error, desired_size_available")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
@@ -261,12 +263,22 @@ export async function runCheckAll(
     return { error: "No products to check." };
   }
 
+  const statusBefore = new Map(
+    products.map((product) => [product.id, getProductStatusKey(product)]),
+  );
+
   let ok = 0;
   let failed = 0;
+  let statusChanged = false;
 
   for (const product of products) {
     try {
       const result = await checkProductNow(product.id);
+      const before = statusBefore.get(product.id);
+      const after = getProductStatusKey(result.product);
+      if (before !== after) {
+        statusChanged = true;
+      }
       if (result.detectionStatus === "ok") ok += 1;
       else failed += 1;
     } catch {
@@ -277,14 +289,18 @@ export async function runCheckAll(
   revalidatePath("/dashboard");
 
   const total = products.length;
+  const checkAllUpdates = statusChanged ? "updated" : "unchanged";
+
   if (failed === 0) {
     return {
       success: `All ${total} product${total === 1 ? "" : "s"} checked successfully.`,
+      checkAllUpdates,
     };
   }
 
   return {
     success: `Checked ${total} products — ${ok} ok, ${failed} with issue${failed === 1 ? "" : "s"}.`,
+    checkAllUpdates,
   };
 }
 
